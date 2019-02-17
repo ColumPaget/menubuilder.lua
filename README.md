@@ -44,8 +44,8 @@ Options
 ```
 	-c                 path to config file, if not supplied then ~/.menubuilder.conf will be tried, followed by /etc/menubuilder.conf
 	-faves [items]     a list of program names to include above everthing else on the top menu 
-  -icons [path]      add a colon-separated list of paths under which to search for icons
-  -no-icons          do not find icons for the menu
+	-icons [path]      add a colon-separated list of paths under which to search for icons
+	-no-icons          do not find icons for the menu
 	-t [app]           terminal app to use for terminal programs, defaults to 'xterm'
 	-term [app]        terminal app to use for terminal programs, defaults to 'xterm'
 	-dialogs [app]     dialog app to use for programs that need additional info. Choices are 'xdialog', 'zenity' or 'qarma'. Defaults to 'no dialogs'. If no dialog app is set then entries for apps requring dialogs will not be added to the menu.
@@ -58,12 +58,12 @@ Multiple 'window manager' arguements can be supplied and can contain the followi
 	blackbox           write to file ~/.blackbox/menu
 	fluxbox            write to file ~/.fluxbox/menu
 	icewm              write to file ~/.icewm/menu
-  pekwm              write to file ~/.pekwm/menu
+	pekwm              write to file ~/.pekwm/menu
 	jwm                write to file ~/.menu.jwm
-  mlvwm              write to file ~/.menu.mlvwm
-  twm                write to file ~/.menu.twm
-  ctwm               write to file ~/.menu.ctwm
-  vtwm               write to file ~/.menu.vtwm
+	mlvwm              write to file ~/.menu.mlvwm
+	twm                write to file ~/.menu.twm
+	ctwm               write to file ~/.menu.ctwm
+	vtwm               write to file ~/.menu.vtwm
 	
 	stdout:blackbox    write blackbox menu to stdout
 	stdout:fluxbox     write fluxbox menu to stdout
@@ -188,7 +188,7 @@ App entries describe programs that can be added to menus. They have the form:
 For example:
 
 ```
-  app xterm group=TerminalEmulator icons=xterm,terminal title="Xterm"
+	app xterm group=TerminalEmulator icons=xterm,terminal title="Xterm"
 	app links group=WebBrowser icons=links,links-browser invoke="links -g www.google.com"
 ```
 
