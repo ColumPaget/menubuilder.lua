@@ -615,6 +615,8 @@ do
 	if item.type=="group"
 	then
 		name,icon=GroupInfoFind(item)
+		if icon==nil then icon="" end
+
 		S:writeln("menu \"" .. name .. "\" \"".. icon .. "\" {\n")
 		IceWM_SubmenuWrite(S, item)
 		S:writeln("}\n\n")
@@ -1093,7 +1095,7 @@ do
 
 if arg == "-c" 
 then 
-	settings.config_path=args[i+1]
+	settings.config=args[i+1]
 	args[i+1]=""
 elseif arg == "-faves" 
 then 
@@ -1140,7 +1142,14 @@ settings.config=process.getenv("HOME").."/.menubuilder.conf:/etc/menubuilder.con
 settings.term="xterm"
 settings.output=""
 settings.find_icons=true
-settings.icon_path=process.getenv("ICON_PATH")..":"
+settings.icon_path=process.getenv("ICON_PATH")
+
+if settings.icon_path==nil 
+then 
+	settings.icon_path="" 
+else
+	settings.icon_path=settings.icon_path..":"
+end
 
 -- don't allow this to be nil, or we can't append to it
 if settings.icon_path == nil then settings.icon_path="" end
