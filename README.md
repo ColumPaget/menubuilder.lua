@@ -24,7 +24,7 @@ ctwm
 Requirements
 ------------
 
-MenuBuilder.lua requires lua, libUseful (https://github.com/ColumPaget/libUseful) version 4.1 and above, and libUseful-lua (https://github.com/ColumPaget/libUseful-lua) version 2.0 and above to have been installed. Building libUseful-lua requires SWIG.
+MenuBuilder.lua requires lua, libUseful (https://github.com/ColumPaget/libUseful) version 4.13 and above, and libUseful-lua (https://github.com/ColumPaget/libUseful-lua) version 2.9 and above to have been installed. Building libUseful-lua requires SWIG.
 
 Installation
 ------------
@@ -80,7 +80,7 @@ Multiple 'window manager' arguements can be supplied and can contain the followi
 Example
 -------
 
-	MenuBuilder.lua -faves xterm,links,smplayer jwm icewm
+	menubuilder.lua -faves xterm,links,smplayer jwm icewm
 
 Including the menus
 -------------------
