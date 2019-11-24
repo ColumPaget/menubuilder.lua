@@ -10,15 +10,16 @@ In addition to .desktop files, MenuBuilder uses a list of appplications from a s
 Supported Window Managers
 -------------------------
 
-blackbox 
-fluxbox
-icewm
-pekwm
-mlvwm
-jwm
-twm 
-vtwm 
-ctwm
+blackbox  https://github.com/bradleythughes/blackbox/
+fluxbox   http://fluxbox.org/
+icewm     https://ice-wm.org/
+pekwm     http://www.pekwm.org/
+mlvwm     http://www2u.biglobe.ne.jp/~y-miyata/mlvwm.html
+jwm       http://joewing.net/projects/jwm/
+pwm       https://tuomov.iki.fi/software/  https://github.com/Cougar/pwm
+vtwm      http://www.vtwm.org/
+ctwm      https://www.ctwm.org/index.html
+twm       
 
 
 Requirements
@@ -150,6 +151,12 @@ For vtwm add the line
 to your .vtwmrc AND RUN VTWM AS 'vtwm -m'
 
 
+For pwm add the line
+```
+include rootmenu.conf
+```
+
+to your .pwm/pwm.conf. You may also need to delete or rename any existing rootmenu definition, say in default-menus.conf
 
 
 Icon Search System

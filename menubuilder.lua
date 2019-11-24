@@ -793,6 +793,70 @@ end
 end
 
 
+--[[
+-- PWM  ***************************************
+--
+]]--
+
+
+function PWM_ItemsWrite(S, group)
+local name, value, icon
+
+for name,item in pairs(group)
+do
+	if item.type == "group"
+	then
+		S:writeln("  submenu \"".. item.name .. "\"\n")
+	elseif item.invoke ~= nil
+	then
+		S:writeln("  entry \"".. item.name .. "\", \"exec\", \"" .. item.invoke .. "\"\n")
+	end
+end
+end
+
+
+function PWM_SubmenusWrite(S, group)
+local name, value, icon
+
+for name,item in pairs(group)
+do
+	if item.type=="group"
+	then
+		S:writeln("  menu \"" ..  item.name .."\", \"".. item.name.."\" {\n")
+		PWM_ItemsWrite(S, item)
+		S:writeln("  }\n")
+	end
+end
+end
+
+
+function PWM_MenuWrite(menu, Path)
+local i, item, S
+
+S=OpenOutputFile(Path)
+if S ~= nil
+then
+
+PWM_SubmenusWrite(S, menu)
+S:writeln("menu \"root_menu\", \"Applications\" {\n")
+if #faves_config > 0
+then
+	PWM_ItemsWrite(S, faves_config)
+	S:writeln("Separator {}\n")
+end
+
+PWM_ItemsWrite(S, menu)
+
+S:writeln("entry \"Restart\", \"restart\"\n")
+S:writeln("entry \"Exit\", \"exit\"\n")
+
+S:writeln("}\n")
+S:close()
+end
+
+end
+
+
 
 --[[
 -- MLVWM  ***************************************
@@ -958,6 +1022,9 @@ then
 		elseif item=="pekwm" 
 		then
 			PekWM_MenuWrite(sorted, process.getenv("HOME").."/.pekwm/menu")
+		elseif item=="pwm" 
+		then
+			PWM_MenuWrite(sorted, process.getenv("HOME").."/.pwm/rootmenu.conf")
 		elseif item=="mlvwm" 
 		then
 			MLVWM_MenuWrite(sorted, process.getenv("HOME").."/.menu.mlvwm")
@@ -1122,7 +1189,7 @@ print("   fluxbox            write to file ~/.fluxbox/menu")
 print("   icewm              write to file ~/.icewm/menu")
 print("   pekwm              write to file ~/.pekwm/menu")
 print("   mlvwm              write to file ~/.menu.mlvwm")
-print("   mwm                write to file ~/.menu.mwm")
+print("   pwm                write to file ~/.pwm/rootmenu.conf")
 print("   jwm                write to file ~/.menu.jwm")
 print("   twm                write to file ~/.menu.twm")
 print("   ctwm               write to file ~/.menu.ctwm")
@@ -1133,7 +1200,7 @@ print("   stdout:fluxbox     write fluxbox menu to stdout")
 print("   stdout:icewm       write icewm menu to stdout")
 print("   stdout:pekwm       write pekwm menu to stdout")
 print("   stdout:mlvwm       write mlvwm menu to stdout")
-print("   stdout:mwm         write mwm menu to stdout")
+print("   stdout:pwm         write pwm menu to stdout")
 print("   stdout:jwm         write jwm menu to stdout")
 print("   stdout:twm         write twm menu to stdout")
 print("   stdout:ctwm        write ctwm menu to stdout")
@@ -1180,7 +1247,7 @@ elseif arg=="-?" or arg=="-h" or arg=="-help" or arg=="--help"
 then
 	DisplayHelp()
 	os.exit(0)
-elseif arg=="all" then settings.output="jwm,twm,mwm,icewm,pekwm,mlvwm,blackbox,fluxbox"
+elseif arg=="all" then settings.output="jwm,twm,pwm,icewm,pekwm,mlvwm,blackbox,fluxbox"
 else settings.output=settings.output .. args[i]..","
 end
 
