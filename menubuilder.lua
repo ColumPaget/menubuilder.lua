@@ -772,7 +772,7 @@ local i, item, S
 S=OpenOutputFile(Path)
 if S ~= nil
 then
-
+S:writeln("RootMenu = \"Applications\" {\n")
 if #faves_config > 0
 then
 	PekWM_ItemsWrite(S, faves_config)
@@ -786,6 +786,7 @@ S:writeln("Entry=\"Reload\" { Actions = \"Reload\" }\n")
 S:writeln("Entry=\"Restart\" { Actions = \"Restart\" }\n")
 S:writeln("Entry=\"Exit\" { Actions = \"Exit\" }\n")
 
+S:writeln("}\n")
 S:close()
 end
 
@@ -960,7 +961,7 @@ then
 		elseif item=="mlvwm" 
 		then
 			MLVWM_MenuWrite(sorted, process.getenv("HOME").."/.menu.mlvwm")
-		elseif item=="twm" or item=="vtwm" or item=="ctwm"
+		elseif item=="twm" or item=="vtwm" or item=="ctwm" or item=="mwm"
 		then
 			TWM_MenuWrite(sorted, process.getenv("HOME").."/.menu."..item)
 		elseif item=="stdout:blackbox" or item=="stdout:fluxbox" then Blackbox_MenuWrite(sorted, "-")
@@ -1120,8 +1121,9 @@ print("   blackbox           write to file ~/.blackbox/menu")
 print("   fluxbox            write to file ~/.fluxbox/menu")
 print("   icewm              write to file ~/.icewm/menu")
 print("   pekwm              write to file ~/.pekwm/menu")
-print("   jwm                write to file ~/.menu.jwm")
 print("   mlvwm              write to file ~/.menu.mlvwm")
+print("   mwm                write to file ~/.menu.mwm")
+print("   jwm                write to file ~/.menu.jwm")
 print("   twm                write to file ~/.menu.twm")
 print("   ctwm               write to file ~/.menu.ctwm")
 print("   vtwm               write to file ~/.menu.vtwm")
@@ -1130,8 +1132,9 @@ print("   stdout:blackbox    write blackbox menu to stdout")
 print("   stdout:fluxbox     write fluxbox menu to stdout")
 print("   stdout:icewm       write icewm menu to stdout")
 print("   stdout:pekwm       write pekwm menu to stdout")
-print("   stdout:jwm         write jwm menu to stdout")
 print("   stdout:mlvwm       write mlvwm menu to stdout")
+print("   stdout:mwm         write mwm menu to stdout")
+print("   stdout:jwm         write jwm menu to stdout")
 print("   stdout:twm         write twm menu to stdout")
 print("   stdout:ctwm        write ctwm menu to stdout")
 print("   stdout:vtwm        write vtwm menu to stdout")
@@ -1177,7 +1180,7 @@ elseif arg=="-?" or arg=="-h" or arg=="-help" or arg=="--help"
 then
 	DisplayHelp()
 	os.exit(0)
-elseif arg=="all" then settings.output="jwm,twm,icewm,pekwm,mlvwm,blackbox,fluxbox"
+elseif arg=="all" then settings.output="jwm,twm,mwm,icewm,pekwm,mlvwm,blackbox,fluxbox"
 else settings.output=settings.output .. args[i]..","
 end
 
