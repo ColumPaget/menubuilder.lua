@@ -269,6 +269,7 @@ app.name=""
 app.termapp=false
 app.query=false
 app.fileselect=false
+app.source="menubuilder"
 app.exec=config:next()
 
 str=config:next()
@@ -439,6 +440,7 @@ end
 if group ~=nil
 then
 	app.type="app"
+	app.source="desktop"
 	app.name=strutil.stripQuotes(config:value("Name"))
 	app.exec=app.name
 	app.icon=strutil.stripQuotes(config:value("Icon"))
@@ -524,11 +526,24 @@ end
 
 
 function Blackbox_ItemWrite(S, item)
+local invoke
 
 	if item.type=="group" 
 	then 
 		Blackbox_SubmenuWrite(S, item.name, item)
-	elseif item.invoke ~= nil then S:writeln("[exec] (" .. item.name.. ") {" .. item.invoke.."}\n") 
+	elseif item.invoke ~= nil 
+	then
+		-- blackbox dequotes these when running them
+		invoke=string.gsub(item.invoke, "\\", "\\\\")
+
+		--if there's arguments then it's likely that some form of shell replacement (e.g. '*') or shell variables are
+		--being used, so we run this command under a shell
+		if string.find(invoke, ' ') ~= nil
+		then
+			S:writeln("[exec] (" .. item.name.. ") {/bin/sh -c \"" .. invoke.."\"}\n") 
+		else
+			S:writeln("[exec] (" .. item.name.. ") {" .. invoke.."}\n") 
+		end
 	end
 end
  
