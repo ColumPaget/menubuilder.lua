@@ -456,7 +456,7 @@ end
 
 
 function LoadDesktopFile(path)
-local S, str, toks, invoke, exec, config
+local S, str, toks, invoke, exec, config, run_dir
 
 S=stream.STREAM(path)
 if S ~= nil
@@ -465,7 +465,13 @@ then
 	config=dataparser.PARSER("config", str)
 	if config
 	then
+	run_dir=strutil.stripQuotes(config:value("Path"))
+	if strutil.strlen(run_dir) > 0
+	then
+	invoke="cd " .. run_dir .. "; exec " .. strutil.stripQuotes(config:value("Exec"))
+	else
 	invoke=strutil.stripQuotes(config:value("Exec"))
+	end
 	toks=strutil.TOKENIZER(invoke, " ")
 	exec=toks:next()
 
