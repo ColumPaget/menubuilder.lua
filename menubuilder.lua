@@ -450,6 +450,7 @@ then
 
 	ProcessAppOverrides(app)
 	MenuAddItem(app.group, app)
+	app_configs[app.name]=app
 	end
 end
 
