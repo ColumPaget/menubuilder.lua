@@ -469,7 +469,7 @@ then
 	run_dir=strutil.stripQuotes(config:value("Path"))
 	if strutil.strlen(run_dir) > 0
 	then
-	invoke="cd " .. run_dir .. "; exec " .. strutil.stripQuotes(config:value("Exec"))
+	invoke="cd '" .. run_dir .. "'; " .. strutil.stripQuotes(config:value("Exec"))
 	else
 	invoke=strutil.stripQuotes(config:value("Exec"))
 	end
