@@ -427,7 +427,9 @@ local app={}
 local group, toks, str
 
 group=strutil.stripQuotes(config:value("Category"))
-if strutil.strlen(group)==0
+-- early versions of libUseful might return a Category of '=', so
+-- disallow that
+if strutil.strlen(group)==0 or group=="="
 then
 	str=strutil.stripQuotes(config:value("Categories"))
 	if str ~= nil 
@@ -437,7 +439,9 @@ then
 	end
 end
 
-if group ~=nil
+if strutil.strlen(group)==0 or group=="=" then group="Misc" end
+
+if group ~=nil and group ~= "="
 then
 	app.type="app"
 	app.source="desktop"
@@ -451,7 +455,8 @@ then
 	ProcessAppOverrides(app)
 	MenuAddItem(app.group, app)
 	app_configs[app.name]=app
-	end
+end
+
 end
 
 
@@ -579,17 +584,19 @@ local i, item, S
 S=OpenOutputFile(Path)
 if S ~= nil
 then
-	S:writeln("[begin] (Blackbox_)\n")
+	S:writeln("[begin] (Blackbox)\n")
 	if #faves_config > 0
 	then
 	Blackbox_ItemsWrite(S, faves_config)
-	S:writeln("[separator]\n")
+	S:writeln("[nop]\n")
 	end
 
 
 	Blackbox_ItemsWrite(S, menu)
 
-	S:writeln("[separator]\n")
+	S:writeln("[nop]\n")
+	S:writeln("[workspaces] (workspace menu)\n")
+	S:writeln("[config] (blackbox config)\n")
 	S:writeln("[reconfig] (Reconfigure)\n")
 	S:writeln("[restart] (Restart)\n")
 	S:writeln("[exit] (Exit)\n")
