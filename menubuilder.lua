@@ -34,9 +34,42 @@ then
 	if strutil.strlen(config.group) > 0 then app.group=config.group end
 	if strutil.strlen(config.name) > 0 then app.name=config.name end
 	if strutil.strlen(config.icon) > 0 then app.icon=config.icon end
+	if strutil.strlen(config.query) > 0 then app.query=config.query end
+	if config.termapp == true then app.termapp=true end
+	if config.ignore == true then app.igore=true end
 end
 
 end
+
+
+
+function NewApp(source, name, exec )
+local app={}
+
+app.type="app"
+app.name=name
+app.termapp=false
+app.ignore=false
+app.query=false
+app.fileselect=false
+app.source=source
+app.exec=exec
+
+return app
+end
+
+
+function NewGroup(name)
+if group_configs[name]==nil 
+then 
+	group_configs[name]={} 
+	group_configs[name].ignore=false
+	group_configs[name].icons=""
+end
+
+return group_configs[name]
+end
+
 
 
 
@@ -53,22 +86,23 @@ else
 	parent=menu_config
 end
 
-	if parent[group] == nil 
-	then 
+if parent[group] == nil 
+then 
 		parent[group]={} 
 		parent[group].type="group"
 		parent[group].name=group
 --		parent[group].size=0
-	end
+end
 
 return parent[group]
 end
+
 
 function MenuAddItem(menu_name, item)
 local group
 
 group=MenuAddGroup(menu_name)
-table.insert(group, item)
+if group ~= nil then table.insert(group, item) end
 
 end
 
@@ -99,7 +133,7 @@ function IconFind(name, path)
 local extn_list={".PNG",".png",".JPG",".jpg",".JPEG",".jpeg"}
 local str, i, extn
 
-if strutil.strlen(name) < 1 then return("") end
+if strutil.strlen(name) < 1 then return(nil) end
 if icon_cache[name] ~=nil then return icon_cache[name] end
 
 for i,extn in ipairs(extn_list)
@@ -179,6 +213,9 @@ local icon, conf
 if settings.find_icons == false then return nil end
 if strutil.strlen(app.icon) > 0 and filesys.exists(app.icon) == true then return app.icon end
 
+icon=IconFind(app.icon, path)
+if icon ~= nil then return icon end
+
 icon=IconFind(app.exec, path)
 if icon ~= nil then return icon end
 
@@ -252,8 +289,6 @@ end
 
 
 
-
-
 --[[
 --  CONFIG FILE FUNCS ***************************************************
 --
@@ -261,17 +296,9 @@ end
 
 -- load config for an application from details found in the main config file
 function LoadAppConfig(config)
-local group, toks, name, value
-local app={}
+local group, toks, name, value, app
 
-app.type="app"
-app.name=""
-app.termapp=false
-app.query=false
-app.fileselect=false
-app.source="menubuilder"
-app.exec=config:next()
-
+app=NewApp("menubuilder", "", config:next())
 str=config:next()
 while str ~= nil
 do
@@ -289,6 +316,7 @@ elseif name=="icon" then app.icons=strutil.stripQuotes(value)
 elseif name=="title" then app.name=strutil.stripQuotes(value)
 elseif name=="invoke" then app.invoke=strutil.stripQuotes(value)
 elseif name=="implies" then app.implies=strutil.stripQuotes(value)
+elseif name=="ignore" then app.ignore=true
 elseif name=="query:title" then app.query_title=strutil.stripQuotes(value)
 elseif name=="query:filter" then app.query_filter=strutil.stripQuotes(value)
 end
@@ -340,22 +368,51 @@ return app
 end
 
 
-
 function LoadGroupConfig(config)
-local name, str
+local name, str, group
 
 name=config:next()
-if group_configs[name]==nil then group_configs[name]={} end
-
+group=NewGroup(name)
 str=config:next()
-while str~=nil
+while str ~= nil
 do
-	if string.sub(str, 1, 6)=="icons=" then group_configs[name].icons=strutil.stripQuotes(string.sub(str,7)) end
-	if string.sub(str, 1, 6)=="title=" then group_configs[name].name=strutil.stripQuotes(string.sub(str,7)) end
-	if string.sub(str, 1, 7)=="parent=" then group_configs[name].parent=strutil.stripQuotes(string.sub(str,8)) end
+	if string.sub(str, 1, 6)=="icons=" then group_configs[name].icons=strutil.stripQuotes(string.sub(str,7)) 
+	elseif string.sub(str, 1, 6)=="title=" then group_configs[name].name=strutil.stripQuotes(string.sub(str,7)) 
+	elseif string.sub(str, 1, 7)=="parent=" then group_configs[name].parent=strutil.stripQuotes(string.sub(str,8))
+	elseif str=="ignore" then group.ignore=true
+	end
+
 	str=config:next()
 end
 
+end
+
+
+function LoadIgnoreGroups(groups)
+local toks, name, group
+
+toks=strutil.TOKENIZER(groups, " |,", "m")
+name=toks:next()
+while name ~= nil
+do
+	group=NewGroup(name)
+	group.ignore=true
+	name=toks:next()
+end
+end
+
+
+function LoadIgnoreApps(apps)
+local toks, name, group
+
+toks=strutil.TOKENIZER(apps, " |,", "m")
+name=toks:next()
+while name ~= nil
+do
+	group=NewGroup(name)
+	group.ignore=true
+	name=toks:next()
+end
 end
 
 
@@ -370,13 +427,11 @@ if toks==nil then return end
 item=toks:next()
 while item ~= nil
 do
-	
 	S=stream.STREAM(item, "r")
 	if S ~= nil then break end
 	io.stderr:write( "config file: '"..item.."' ... not found\n")
 	item=toks:next()
 end
-
 
 if S ~= nil
 then
@@ -392,6 +447,12 @@ then
 			if entry_type=="group"
 			then
 				LoadGroupConfig(toks)
+			elseif entry_type=="ignore-groups"
+			then
+				LoadIgnoreGroups(toks:remaining())
+			elseif entry_type=="ignore-apps"
+			then
+				LoadIgnoreApps(toks:remaining())
 			elseif entry_type=="override"
 			then
 				app=LoadAppConfig(toks)
@@ -421,73 +482,83 @@ end
 --
 ]]--
 
+function AppChooseGroup(name, groups)
+local str
+local toks
 
-function AddFromDesktopFile(config, invoke)
-local app={}
-local group, toks, str
-
-group=strutil.stripQuotes(config:value("Category"))
--- early versions of libUseful might return a Category of '=', so
--- disallow that
-if strutil.strlen(group)==0 or group=="="
+if app_configs[name] ~= nil 
 then
-	str=strutil.stripQuotes(config:value("Categories"))
-	if str ~= nil 
-	then 
-		toks=strutil.TOKENIZER(str, ",")
-		group=toks:next()
-	end
+	if strutil.strlen(app_configs[name].group) > 0 then return app_configs[name].group end
 end
 
-if strutil.strlen(group)==0 or group=="=" then group="Misc" end
+if groups==nil then return nil end
 
-if group ~=nil and group ~= "="
-then
-	app.type="app"
-	app.source="desktop"
-	app.name=strutil.stripQuotes(config:value("Name"))
-	app.exec=app.name
-	app.icon=strutil.stripQuotes(config:value("Icon"))
+toks=strutil.TOKENIZER(groups, ";")
+str=toks:next()
+while str ~= nil
+do
+	if group_configs[str] == nil then return str end
+	if group_configs[str].ignore == false then return str end
 
-	app.invoke=invoke
-	app.group=group
-
-	ProcessAppOverrides(app)
-	MenuAddItem(app.group, app)
-	app_configs[app.name]=app
+str=toks:next()
 end
 
+return nil
 end
+
+
+
 
 
 
 function LoadDesktopFile(path)
-local S, str, toks, invoke, exec, config, run_dir
+local S, str, toks, invoke, exec, run_dir, app, categories
 
 S=stream.STREAM(path, "r")
 if S ~= nil
 then
-	str=S:readdoc()
-	config=dataparser.PARSER("config", str)
-	if config ~= nil
-	then
-		run_dir=strutil.stripQuotes(config:value("Path"))
-		if strutil.strlen(run_dir) > 0
-		then
-			invoke="cd '" .. run_dir .. "'; " .. strutil.stripQuotes(config:value("Exec"))
-		else
-			invoke=strutil.stripQuotes(config:value("Exec"))
-		end
+	app=NewApp("desktop", "", "")
+	str=S:readln()
 
-		toks=strutil.TOKENIZER(invoke, " ")
-		exec=toks:next()
+	while str ~= nil
+	do
+	toks=strutil.TOKENIZER(strutil.stripTrailingWhitespace(str), "=")
+	key=toks:next()
+	value=strutil.stripQuotes(toks:remaining())
 
-		if strutil.strlen(exec) >0 then AddFromDesktopFile(config, invoke) end
-	else
-		print("ERROR: Failed to load "..path)
+	if key=="Name" then app.name=value
+	elseif key=="Icon" then app.icon=value
+	elseif key=="Path" then run_dir=value
+	elseif key=="Exec" then exec=value
+	elseif key=="Categories" then categories=value
 	end
 
+	str=S:readln()
+	end
 	S:close()
+
+
+	--if app has ignore set, then do nothing
+	if app_configs[name] ~= nil and app_configs[name].ignore == true 
+	then
+			return 
+	end
+
+	if strutil.strlen(run_dir) > 0
+	then
+		invoke="cd '" .. run_dir .. "'; " .. exec
+	else
+			invoke=exec
+	end
+
+	if strutil.strlen(exec) >0 
+	then 
+	app.invoke=invoke
+	app.group=AppChooseGroup(app.name, categories)
+	ProcessAppOverrides(app)
+	MenuAddItem(app.group, app)
+	end
+
 end
 
 end
