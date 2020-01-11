@@ -464,28 +464,27 @@ end
 function LoadDesktopFile(path)
 local S, str, toks, invoke, exec, config, run_dir
 
-S=stream.STREAM(path)
+S=stream.STREAM(path, "r")
 if S ~= nil
 then
 	str=S:readdoc()
 	config=dataparser.PARSER("config", str)
-	if config
+	if config ~= nil
 	then
-	run_dir=strutil.stripQuotes(config:value("Path"))
-	if strutil.strlen(run_dir) > 0
-	then
-	invoke="cd '" .. run_dir .. "'; " .. strutil.stripQuotes(config:value("Exec"))
+		run_dir=strutil.stripQuotes(config:value("Path"))
+		if strutil.strlen(run_dir) > 0
+		then
+			invoke="cd '" .. run_dir .. "'; " .. strutil.stripQuotes(config:value("Exec"))
+		else
+			invoke=strutil.stripQuotes(config:value("Exec"))
+		end
+
+		toks=strutil.TOKENIZER(invoke, " ")
+		exec=toks:next()
+
+		if strutil.strlen(exec) >0 then AddFromDesktopFile(config, invoke) end
 	else
-	invoke=strutil.stripQuotes(config:value("Exec"))
-	end
-	toks=strutil.TOKENIZER(invoke, " ")
-	exec=toks:next()
-
-	if strutil.strlen(exec) >0
-	then
-	AddFromDesktopFile(config, invoke)
-	end
-
+		print("ERROR: Failed to load "..path)
 	end
 
 	S:close()
@@ -1128,14 +1127,27 @@ end
 
 
 function IconPathAdd(prefix)
-subdirs={"64x64","48x48","32x32"}
+local fslist, dir
+local subdirs={"128x128","64x64","48x48","32x32", "16x16"}
 
 settings.icon_path=settings.icon_path..prefix.."/share/icons:"
-for i,sub in ipairs(subdirs)
+settings.icon_path=settings.icon_path .. prefix.. "/share/pixmaps/:"
+
+fslist=filesys.GLOB(prefix.."/share/icons/*")
+dir=fslist:next()
+while dir ~= nil
 do
-settings.icon_path=settings.icon_path .. prefix.. "/share/icons/hicolor/" ..sub .."/apps/:"
-settings.icon_path=settings.icon_path .. prefix.. "/share/icons/hicolor/" ..sub .."/places/:"
-settings.icon_path=settings.icon_path .. prefix.. "/share/icons/hicolor/" ..sub .."/devices/:"
+	if fslist:info().type == "directory"
+	then						
+	for i,sub in ipairs(subdirs)
+	do
+		settings.icon_path=settings.icon_path .. dir .. "/" .. sub .."/:"
+		settings.icon_path=settings.icon_path .. dir .. "/" .. sub .."/apps/:"
+		settings.icon_path=settings.icon_path .. dir .. "/" .. sub .."/places/:"
+		settings.icon_path=settings.icon_path .. dir .. "/" .. sub .."/devices/:"
+	end
+	end
+dir=fslist:next()
 end
 
 end
