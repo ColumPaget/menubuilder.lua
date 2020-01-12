@@ -28,22 +28,22 @@ end
 function ProcessAppOverrides(app)
 local name, config
 
-config=overrides_config[app.exec]
+config=overrides_config[app.name]
+if config == nil then config=overrides_config[app.exec] end
 if config ~= nil 
 then
 	if strutil.strlen(config.group) > 0 then app.group=config.group end
-	if strutil.strlen(config.name) > 0 then app.name=config.name end
 	if strutil.strlen(config.icon) > 0 then app.icon=config.icon end
-	if strutil.strlen(config.query) > 0 then app.query=config.query end
 	if config.termapp == true then app.termapp=true end
-	if config.ignore == true then app.igore=true end
+	if config.ignore == true then app.ignore=true end
+	if config.query == true then app.query=true end
 end
 
 end
 
 
 
-function NewApp(source, name, exec )
+function NewApp(source, name, exec)
 local app={}
 
 app.type="app"
@@ -416,6 +416,25 @@ end
 end
 
 
+function LoadOverrides(app_config)
+local app, toks
+
+	app=LoadAppConfig(app_config)
+	if app ~= nil 
+	then 
+		--Overrides have one difference from normal app configs, that multiple app names
+		--can be specified seperated by commas. Thus we can apply the same override to many apps
+		toks=strutil.TOKENIZER(app.exec, ",")
+		str=toks:next()
+		while str ~= nil
+		do
+		overrides_config[str]=app 
+		str=toks:next()
+		end
+
+	end
+end
+
 
 function LoadConfig()
 local S, str, app, entry_type
@@ -455,8 +474,7 @@ then
 				LoadIgnoreApps(toks:remaining())
 			elseif entry_type=="override"
 			then
-				app=LoadAppConfig(toks)
-				if app ~= nil then overrides_config[app.exec]=app end
+				LoadOverrides(toks)
 			elseif entry_type=="app"
 			then
 				app=LoadAppConfig(toks)

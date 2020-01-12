@@ -181,14 +181,16 @@ Icons are only currently supported for the JWM and IceWM window managers. Icons 
 Config File
 -----------
 
-The config file has three types of entry
+The config file has the following types of entry
 
 1) app entries
-App entries describe programs that can be added to menus. They have the form:
+App entries describe programs that lack .desktop files. They have the form:
 
 ```
-	app [programfile] group=[group] icons=[icon names] title=[title] invoke=[invocation]
+	app [name] group=[group] icons=[icon names] title=[title] invoke=[invocation]
 ```
+
+'name' will be the filename on disk for this program.
 
 'group' is the application group, or submenu that this item belongs in. 'title' is the name that will be displayed in the menu. 'icons' is a comma-separated list of icon names that could be used as an icon for this app (menubuilder will search for files matching [icon name].png, [icon name].jpg etc). 'invocation' is the full command-line used to run the app. The icons, title and invoke arguments are optional.
 
@@ -228,6 +230,13 @@ Override entries are app entries that mostly apply to apps discovered via .deskt
 	override DesktopDungeons group=Roguelike icons=skull,sword,goblin
 ```
 
+Override entries have a special feature where multiple apps can be specified as a comma-separated list, and the same config applied to them, like so:
+
+```
+override Helm,PHASEX,IanniX,QMidiArp,Qtractor,drumkv1,samplv1,padthv1,synthv1,amsynth group=Music
+```
+
+
 3) group entries
 
 group entries apply settings to a menu subgroup, for example:
@@ -237,3 +246,19 @@ group entries apply settings to a menu subgroup, for example:
 ```
 
 The 'parent' option specifies that this is not a top-level group, but is a subgroup of the group 'games'
+
+Some groups are discovered from the "Categories" entry in .desktop files. Such entries are normally a list of groups seperated by semi-colons. menubuilder.lua picks the first of these groups, but this is not always useful. You can ignore groups with the 'ignore' qualifier:
+
+```
+group KDE ignore
+```
+
+This will have the effect that this group will not be added to the menu, and that applications belonging to this group will be booked against the first group in their "Categories" entry that isn't ignored.
+
+4) 'ignore' entries
+
+'ignore-groups' and 'ignore-apps' can be used to more conviniently list items to be ignored, like so:
+
+```
+ignore-groups GTK,Gtk,Qt,Application,ConsoleOnly,GNOME,SDL
+```
