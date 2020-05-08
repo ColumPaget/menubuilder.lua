@@ -115,7 +115,7 @@ toks=strutil.TOKENIZER(implied_apps, ",")
 item=toks:next()
 while item ~= nil
 do
-config=app_configs[item]
+config=app_configs[string.lower(item)]
 if config ~= nil and config.group ~=nil then MenuAddItem(config.group, config) end
 item=toks:next()
 end
@@ -391,7 +391,7 @@ end
 function LoadIgnoreGroups(groups)
 local toks, name, group
 
-toks=strutil.TOKENIZER(groups, " |,", "m")
+toks=strutil.TOKENIZER(groups, ",")
 name=toks:next()
 while name ~= nil
 do
@@ -405,12 +405,12 @@ end
 function LoadIgnoreApps(apps)
 local toks, name, group
 
-toks=strutil.TOKENIZER(apps, " |,", "m")
+toks=strutil.TOKENIZER(apps, ",")
 name=toks:next()
 while name ~= nil
 do
-	group=NewGroup(name)
-	group.ignore=true
+	if overrides_config[name]==nil then overrides_config[name]={} end
+	overrides_config[name].ignore=true
 	name=toks:next()
 end
 end
@@ -481,7 +481,7 @@ then
 				if app ~= nil
 				then
 					if strutil.strlen(app.group) ==0 then io.stderr:write( "ERROR: No group for app: "..str.."\n") end
-					app_configs[app.exec]=app
+					app_configs[string.lower(app.exec)]=app
 				end
 			end
 		end
@@ -544,6 +544,8 @@ then
 	key=toks:next()
 	value=strutil.stripQuotes(toks:remaining())
 
+	strutil.trim(key)
+	strutil.trim(value)
 	if key=="Name" then app.name=value
 	elseif key=="Icon" then app.icon=value
 	elseif key=="Path" then run_dir=value
@@ -556,26 +558,40 @@ then
 	S:close()
 
 
+	if strutil.strlen(exec) < 1 then return end
+
+
+	--desktop files can specify a 'filename' argument using %f. As we are building menus for window managers
+	--that don't understand this, we pass an empty string for this value to get rid of it
+	app.exec=string.gsub(exec, "%%f","")
+	
+	app.group=AppChooseGroup(app.name, categories)
+
+	--once both app.name, app.group and app.exec are sorted, we can check overrides	
+	ProcessAppOverrides(app)
+
 	--if app has ignore set, then do nothing
-	if app_configs[name] ~= nil and app_configs[name].ignore == true 
+	if app.ignore==true then return end
+	if app_configs[exec] ~= nil and app_configs[exec].ignore == true then return end
+
+
+	value=string.lower(app.name)
+	if app_configs[value] == nil 
 	then
-			return 
+		app_configs[value]=app
+	else
+		if app_configs[value].ignore == true then return end
 	end
+
 
 	if strutil.strlen(run_dir) > 0
 	then
-		invoke="cd '" .. run_dir .. "'; " .. exec
+		app.invoke="cd '" .. run_dir .. "'; " .. app.exec
 	else
-			invoke=exec
+			app.invoke=app.exec
 	end
 
-	if strutil.strlen(exec) >0 
-	then 
-	app.invoke=invoke
-	app.group=AppChooseGroup(app.name, categories)
-	ProcessAppOverrides(app)
 	MenuAddItem(app.group, app)
-	end
 
 end
 
@@ -812,6 +828,7 @@ else
 end
 
 JWM_ItemsWrite(S, group)
+
 S:writeln("  </Menu>\n")
 end
 
@@ -1167,13 +1184,14 @@ end
 
 
 function SelectFaves(faves)
-local toks, item
+local toks, item, name
 
 toks=strutil.TOKENIZER(faves, ",")
 item=toks:next()
 while item
 do
-	if app_configs[item] ~= nil then table.insert(faves_config, app_configs[item]) end
+  name=string.lower(item)
+	if app_configs[name] ~= nil then table.insert(faves_config, app_configs[name]) end
 	item=toks:next()
 end
 
@@ -1245,14 +1263,15 @@ end
 
 --scan a directory for applications
 function ScanDir(dir)
-local config, files, curr
+local config, files, curr, name
 
 files=filesys.GLOB(dir.."/*")
 curr=files:next()
 while curr ~= nil
 do
 	--does the application exist in the list of applications loaded from the config file?
-	config=app_configs[filesys.basename(curr)]
+	name=string.lower(filesys.basename(curr))
+	config=app_configs[name]
 	if config ~= nil and config.group ~=nil
 	then
 		-- is it a dialog app, like XDialog, Zenity or Qarma? If so then add it to the dialog_apps table
@@ -1289,6 +1308,76 @@ do
 end
 end
 
+function CopyGroup(in_group, out_group)
+local name, item
+
+for i,item in ipairs(in_group)
+do
+	if item.type ~= nil
+	then
+		table.insert(out_group, item)
+	end
+end
+
+end
+
+
+--parent is the group that items will be moved to if
+--this group is too small. For top level items this will
+--either be the 'Misc' group, or it could be nil
+function PostProcessGroup(parent, group, min_size)
+local name, item
+
+	--first go through subitems of this group, possibly moving stuff out of them into this group
+	for name,item in pairs(group)
+	do
+		if item.type=="group"
+		then
+			if PostProcessGroup(group, item, settings.submenu_size) == false then group[name]=nil end
+		end
+
+	end
+
+	--if parent is nil then don't try moving/deleting this group, otherwise, if the group is too
+	--small, move it into the parent
+	if parent ~= nil and #group < min_size
+	then
+			CopyGroup(group, parent)
+
+	-- we don't try to delete the group from the parent here,
+	-- because the parent is the group we are moving things to, which
+	-- is not always the real parent of the group we are considering
+	-- so we return false, and let calling function delete the group
+			return false
+	end
+
+	return true
+end
+
+
+function PostProcessItems()
+local name, item, misc
+
+-- create misc group if needed, else leave as nil
+if settings.misc_group > 0 
+then 
+misc={} 
+misc.type="group"
+misc.name="Misc"
+end
+
+
+for name,item in pairs(menu_config)
+do
+	if item.type=="group"
+	then
+	if PostProcessGroup(misc, item, settings.misc_group) == false then menu_config[name]=nil end
+	end
+end
+
+--if we created a misc group, and it has items in it, then add it to the menu
+if misc ~= nil and #misc > 0 then table.insert(menu_config, misc) end
+end
 
 
 function DisplayHelp()
@@ -1308,10 +1397,13 @@ print("  -no-icons          do not find icons for the menu")
 print("  -t [app]           terminal app to use for terminal programs, defaults to 'xterm'")
 print("  -term [app]        terminal app to use for terminal programs, defaults to 'xterm'")
 print("  -dialogs [app]     dialog app to use for programs that need additional info. Choices are 'xdialog', 'zenity' or 'qarma'. Defaults to 'no dialogs'. If no dialog app is set then entries for apps requring dialogs will not be added to the menu.")
+print("  -misc [size]       Merge any top-level menus that contain less than <size> items into a single 'miscellaneous' top-level group.")
+print("  -submenu [size]    For any groups that are not top-level and which contain less than <size> items, show the items in the parent group, rather than in a submenu.")
+
 print("")
 
 print("supported window managers:")
-print("Multiple 'window manager' arguements can be supplied and can contain the following values:")
+print("Multiple 'window manager' arguments can be supplied and can contain the following values:")
 print("")
 print("   all                this will write out menu files for all supported window managers")
 print("   blackbox           write to file ~/.blackbox/menu")
@@ -1365,6 +1457,16 @@ then
 elseif arg == "-no-icons" 
 then
 	settings.find_icons=false
+elseif arg == "-s" or arg == "-submenu"
+then
+	settings.submenu_size=tonumber(args[i+1])
+	if settings.submenu_size==nil then settings.submenu_size=0 end
+	args[i+1]=""
+elseif arg == "-m" or arg == "-misc"
+then
+	settings.misc_group=tonumber(args[i+1])
+	if settings.misc_group==nil then settings.misc_group=0 end
+	args[i+1]=""
 elseif arg== "-dialogs"
 then
 	DialogApp(args[i+1])
@@ -1404,6 +1506,8 @@ settings.term="xterm"
 settings.output=""
 settings.find_icons=true
 settings.icon_path=process.getenv("ICON_PATH")
+settings.submenu_size=0
+settings.misc_group=0
 
 if settings.icon_path==nil 
 then 
@@ -1424,6 +1528,7 @@ LoadConfig()
 ScanDirectoriesInPath()
 
 LoadDesktopFiles(process.getenv("HOME").."/.local/")
+PostProcessItems()
 SelectFaves(settings.faves)
 sorted=SortMenu(menu_config)
 

@@ -50,6 +50,8 @@ Options
 	-t [app]           terminal app to use for terminal programs, defaults to 'xterm'
 	-term [app]        terminal app to use for terminal programs, defaults to 'xterm'
 	-dialogs [app]     dialog app to use for programs that need additional info. Choices are 'xdialog', 'zenity' or 'qarma'. Defaults to 'no dialogs'. If no dialog app is set then entries for apps requring dialogs will not be added to the menu.
+	-misc [size]       Merge any top-level menus that contain less than <size> items into a single 'miscellaneous' top-level group.
+	-submenu [size]    For any groups that are not top-level and which contain less than <size> items, show the items in the parent group, rather than in a submenu.
 
 ```
 Multiple 'window manager' arguements can be supplied and can contain the following values:
