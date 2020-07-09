@@ -618,9 +618,12 @@ end
 function OpenOutputFile(Path)
 local S
 
--- don't try to rename stdout!
-if Path ~= "-" then filesys.rename(Path, Path.."-") end
-
+-- don't try to create or rename stdout!
+if Path ~= "-" 
+then 
+	filesys.mkdirPath(Path)
+	filesys.rename(Path, Path.."-")
+end
 
 S=stream.STREAM(Path, "w")
 if S==nil
@@ -636,7 +639,7 @@ end
 
 
 --[[
--- BLACKBOX/FLUXBOX/OPENBOX/HACKEDBOX  ***************************************
+-- BLACKBOX/FLUXBOX/HACKEDBOX  ***************************************
 --
 ]]--
 
@@ -712,6 +715,84 @@ end
 end
 
 
+--[[
+-- OPENBOX  ***************************************
+--
+]]--
+
+
+function Openbox_ItemWrite(S, item)
+local invoke
+
+	if item.type=="group" 
+	then 
+		Openbox_SubmenuWrite(S, item.name, item)
+	elseif item.invoke ~= nil 
+	then
+		-- blackbox dequotes these when running them
+		invoke=string.gsub(item.invoke, "\\", "\\\\")
+
+		--if there's arguments then it's likely that some form of shell replacement (e.g. '*') or shell variables are
+		--being used, so we run this command under a shell
+		if string.find(invoke, ' ') ~= nil
+		then
+			S:writeln("<item label=\"" .. item.name.. "\"><action name=\"Execute\"><command>/bin/sh -c '" .. invoke.."'</command></action></item>\n") 
+		else
+			S:writeln("<item label=\"" .. item.name.. "\"><action name=\"Execute\"><command>" .. invoke.."</command></action></item>\n") 
+		end
+	end
+end
+ 
+
+function Openbox_ItemsWrite(S, items)
+local name, item
+
+for name,item in pairs(items)
+do
+	Openbox_ItemWrite(S, item)
+end
+end
+
+
+function Openbox_SubmenuWrite(S, title, group)
+
+S:writeln("<menu id=\""..title.. "\" label=\""..title.."\">\n")
+Openbox_ItemsWrite(S, group)
+S:writeln("</menu>\n")
+
+end
+
+function Openbox_MenuWrite(menu, Path)
+local i, item, S
+
+S=OpenOutputFile(Path)
+if S ~= nil
+then
+	S:writeln("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
+  S:writeln("<openbox_menu xmlns=\"http://openbox.org/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"  xsi:schemaLocation=\"http://openbox.org/ file:///usr/share/openbox/menu.xsd\">\n")
+	S:writeln("<menu id=\"root-menu\" label=\"Openbox\">\n")
+
+	if #faves_config > 0
+	then
+	Openbox_ItemsWrite(S, faves_config)
+	S:writeln("<separator />\n")
+	end
+
+
+	Openbox_ItemsWrite(S, menu)
+	S:writeln("<separator />\n")
+	S:writeln("<item label=\"Reconfigure\"><action name=\"Reconfigure\"/></item>\n") 
+	S:writeln("<item label=\"Restart\"><action name=\"Restart\"/></item>\n") 
+	S:writeln("<item label=\"Exit\"><action name=\"Exit\"/></item>\n") 
+
+	S:writeln("</menu>\n")
+  S:writeln("</openbox_menu>\n")
+	S:close()
+end
+
+end
+
+
 
 
 
@@ -766,7 +847,6 @@ end
 function IceWM_MenuWrite(menu, Path)
 local i, name, item, icon,  S
 
-filesys.mkdirPath(Path)
 S=OpenOutputFile(Path)
 if S ~= nil
 then
@@ -861,6 +941,8 @@ S:writeln("</JWM>\n")
 
 
 S:close()
+
+os.execute("jwm -reload")
 end
 
 end
@@ -1147,6 +1229,9 @@ then
 		elseif item=="fluxbox" 
 		then
 			Blackbox_MenuWrite(sorted, process.getenv("HOME") .. "/.fluxbox/menu")
+		elseif item=="openbox"
+		then
+			Openbox_MenuWrite(sorted, process.getenv("HOME") .. "/.config/openbox/menu.xml")
 		elseif item=="icewm" 
 		then
 			IceWM_MenuWrite(sorted, process.getenv("HOME").."/.icewm/menu")
@@ -1408,6 +1493,7 @@ print("")
 print("   all                this will write out menu files for all supported window managers")
 print("   blackbox           write to file ~/.blackbox/menu")
 print("   fluxbox            write to file ~/.fluxbox/menu")
+print("   openbox            write to file ~/.config/openbox/menu.xml")
 print("   icewm              write to file ~/.icewm/menu")
 print("   pekwm              write to file ~/.pekwm/menu")
 print("   mlvwm              write to file ~/.menu.mlvwm")
@@ -1419,6 +1505,7 @@ print("   vtwm               write to file ~/.menu.vtwm")
 print(" ")
 print("   stdout:blackbox    write blackbox menu to stdout")
 print("   stdout:fluxbox     write fluxbox menu to stdout")
+print("   stdout:openbox     write fluxbox menu to stdout")
 print("   stdout:icewm       write icewm menu to stdout")
 print("   stdout:pekwm       write pekwm menu to stdout")
 print("   stdout:mlvwm       write mlvwm menu to stdout")
