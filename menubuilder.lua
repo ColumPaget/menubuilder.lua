@@ -133,24 +133,11 @@ function IconFind(name, path)
 local extn_list={".PNG",".png",".JPG",".jpg",".JPEG",".jpeg"}
 local str, i, extn
 
+if settings.find_icons == false then return end
 if strutil.strlen(name) < 1 then return(nil) end
-if icon_cache[name] ~=nil then return icon_cache[name] end
-
-for i,extn in ipairs(extn_list)
-do
-	str=filesys.find(name..extn, path)
-	if strutil.strlen(str) > 0 
-	then 
-			icon_cache[name]=str
-			return str 
-	end
-
-	str=filesys.find(string.lower(name)..extn, path)
-	if strutil.strlen(str) > 0 
-	then 
-		icon_cache[name]=str
-		return str 
-	end
+if icon_cache[name] ~=nil 
+then
+	return icon_cache[name] 
 end
 
 return nil
@@ -161,6 +148,8 @@ end
 function IconFindFromList(icon_list)
 local toks, name, icon
 
+
+if settings.find_icons == false then return end
 toks=strutil.TOKENIZER(icon_list, ",")
 name=toks:next()
 while name ~= nil
@@ -172,6 +161,34 @@ do
 end
 
 return nil
+end
+
+
+function IconsLoad(path)
+local toks, dir
+
+if settings.find_icons == false then return end
+
+toks=strutil.TOKENIZER(path, ":")
+dir=toks:next()
+while dir ~= nil
+do
+	files=filesys.GLOB(dir.."*.[jJpP]*[gG]")
+	file=files:next()
+	while file ~= nil
+	do
+		extn=string.lower(filesys.extn(file))
+		if extn==".jpg" or extn==".jpeg" or extn==".png"
+		then
+			name=filesys.basename(file)
+			name=string.sub(name, 1, string.len(name)-string.len(extn))
+			if icon_cache[name] == nil then icon_cache[name]=file end
+		end
+		file=files:next()
+	end
+	dir=toks:next()
+end
+
 end
 
 
@@ -691,7 +708,7 @@ local i, item, S
 S=OpenOutputFile(Path)
 if S ~= nil
 then
-	S:writeln("[begin] (Blackbox)\n")
+	S:writeln("[begin] (Root Menu)\n")
 	if #faves_config > 0
 	then
 	Blackbox_ItemsWrite(S, faves_config)
@@ -729,6 +746,9 @@ local invoke
 		Openbox_SubmenuWrite(S, item.name, item)
 	elseif item.invoke ~= nil 
 	then
+		icon=AppIconFind(item, settings.icon_path)
+		if icon==nil then icon="" end
+
 		-- blackbox dequotes these when running them
 		invoke=string.gsub(item.invoke, "\\", "\\\\")
 
@@ -736,9 +756,9 @@ local invoke
 		--being used, so we run this command under a shell
 		if string.find(invoke, ' ') ~= nil
 		then
-			S:writeln("<item label=\"" .. item.name.. "\"><action name=\"Execute\"><command>/bin/sh -c '" .. invoke.."'</command></action></item>\n") 
+			S:writeln("<item label=\"" .. item.name.. "\" icon=\""..icon.."\"><action name=\"Execute\"><command>/bin/sh -c \"" .. invoke.."\"</command></action></item>\n") 
 		else
-			S:writeln("<item label=\"" .. item.name.. "\"><action name=\"Execute\"><command>" .. invoke.."</command></action></item>\n") 
+			S:writeln("<item label=\"" .. item.name.. "\" icon=\""..icon.."\"><action name=\"Execute\"><command>" .. invoke.."</command></action></item>\n") 
 		end
 	end
 end
@@ -755,8 +775,12 @@ end
 
 
 function Openbox_SubmenuWrite(S, title, group)
+local name, icon
 
-S:writeln("<menu id=\""..title.. "\" label=\""..title.."\">\n")
+name,icon=GroupInfoFind(group)
+if icon == nil then icon="" end
+
+S:writeln("<menu id=\""..title.. "\" label=\""..title.."\" icon=\"" .. icon.. "\">\n")
 Openbox_ItemsWrite(S, group)
 S:writeln("</menu>\n")
 
@@ -788,6 +812,8 @@ then
 	S:writeln("</menu>\n")
   S:writeln("</openbox_menu>\n")
 	S:close()
+
+	os.execute("openbox --reconfigure")
 end
 
 end
@@ -860,6 +886,8 @@ end
 
 IceWM_SubmenuWrite(S, menu)
 S:close()
+
+os.execute("icewm --restart")
 end
 
 end
@@ -1613,6 +1641,7 @@ ParseCommandLine(arg)
 
 LoadConfig()
 ScanDirectoriesInPath()
+IconsLoad(settings.icon_path)
 
 LoadDesktopFiles(process.getenv("HOME").."/.local/")
 PostProcessItems()
