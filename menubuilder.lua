@@ -1594,7 +1594,7 @@ elseif arg=="-?" or arg=="-h" or arg=="-help" or arg=="--help"
 then
 	DisplayHelp()
 	os.exit(0)
-elseif arg=="all" then settings.output="jwm,twm,pwm,icewm,pekwm,mlvwm,blackbox,fluxbox"
+elseif arg=="all" then settings.output="jwm,twm,vtwm,ctwm,pwm,icewm,pekwm,mlvwm,blackbox,fluxbox,openbox"
 else settings.output=settings.output .. args[i]..","
 end
 

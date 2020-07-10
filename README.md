@@ -12,6 +12,7 @@ Supported Window Managers
 
 blackbox  https://github.com/bradleythughes/blackbox/
 fluxbox   http://fluxbox.org/
+openbox   http://openbox.org/
 icewm     https://ice-wm.org/
 pekwm     http://www.pekwm.org/
 mlvwm     http://www2u.biglobe.ne.jp/~y-miyata/mlvwm.html
@@ -60,8 +61,10 @@ Multiple 'window manager' arguements can be supplied and can contain the followi
 	all                this will write out menu files for all supported window managers
 	blackbox           write to file ~/.blackbox/menu
 	fluxbox            write to file ~/.fluxbox/menu
+	openbox            write to file ~/.config/openbox/menu.xml
 	icewm              write to file ~/.icewm/menu
 	pekwm              write to file ~/.pekwm/menu
+	pwm                write to file ~/.pwm/rootmenu.conf
 	jwm                write to file ~/.menu.jwm
 	mlvwm              write to file ~/.menu.mlvwm
 	twm                write to file ~/.menu.twm
@@ -70,8 +73,10 @@ Multiple 'window manager' arguements can be supplied and can contain the followi
 	
 	stdout:blackbox    write blackbox menu to stdout
 	stdout:fluxbox     write fluxbox menu to stdout
+	stdout:openbox     write fluxbox menu to stdout
 	stdout:icewm       write icewm menu to stdout
 	stdout:pekwm       write pekwm menu to stdout
+	stdout:pwm         write pwm menu to stdout
 	stdout:jwm         write jwm menu to stdout
 	stdout:mlvwm       write mlvwm menu to stdout
 	stdout:twm         write twm menu to stdout
@@ -83,7 +88,9 @@ Multiple 'window manager' arguements can be supplied and can contain the followi
 Example
 -------
 
+```
 	menubuilder.lua -faves xterm,links,smplayer jwm icewm
+```
 
 Including the menus
 -------------------
@@ -178,6 +185,11 @@ the group the application belongs to
 
 Icons are only currently supported for the JWM and IceWM window managers. Icons can be turned off altogether with the '-no-icons' command-line option.
 
+
+Window Manager Update
+---------------------
+
+The jwm, openbox and icewm window managers support auto-update, so that when menubuilder creates a new menu for them, it signals them to reload their menus. This allows menubuilder to be launched by an inotify or other filesystem notification service sees new files created. Menus can thus be automatically updated and the window-manager told to reload.
 
 
 Config File
