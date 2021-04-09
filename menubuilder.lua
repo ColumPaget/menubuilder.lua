@@ -1616,7 +1616,9 @@ end
 ]]--
 
 
-settings.config=process.getenv("HOME").."/.menubuilder.conf:/etc/menubuilder.conf"
+settings.config = process.getenv("HOME") .. "/.config/menubuilder.conf"
+settings.config = settings.config .. ":" .. process.getenv("HOME") .. "/.menubuilder.conf"
+settings.config = settings.config .. ":/etc/menubuilder.conf"
 settings.term="xterm"
 settings.output=""
 settings.find_icons=true

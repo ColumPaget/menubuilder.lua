@@ -31,7 +31,7 @@ MenuBuilder.lua requires lua, libUseful (https://github.com/ColumPaget/libUseful
 Installation
 ------------
 
-an example config file is included that should be copied to "/etc/menubuilder.conf" or "~/.menubuilder.conf". menubuilder can then be run as a lua script with just "lua menubuilder.lua all". On linux the 'binfmt_misc' feature can be used to automatically run menubuilder without specifying the lua interpreter.
+an example config file is included that should be copied to "/etc/menubuilder.conf" or "~/.config/menubuilder.conf" or "~/.menubuilder.conf". menubuilder can then be run as a lua script with just "lua menubuilder.lua all". On linux the 'binfmt_misc' feature can be used to automatically run menubuilder without specifying the lua interpreter.
 
 Usage
 -----
@@ -44,7 +44,7 @@ Options
 -------
 
 ```
-	-c                 path to config file, if not supplied then ~/.menubuilder.conf will be tried, followed by /etc/menubuilder.conf
+	-c                 path to config file, if not supplied then ~/.config/menubuilder.conf will be tried, followed by ~/.menubuilder.conf and finally /etc/menubuilder.conf
 	-faves [items]     a list of program names to include above everthing else on the top menu 
 	-icons [path]      add a colon-separated list of paths under which to search for icons
 	-no-icons          do not find icons for the menu
