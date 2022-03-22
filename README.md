@@ -236,6 +236,15 @@ if an app needs to be passed a list of files on startup, then use the 'fileapp' 
 (please note, the 'query:filter' feature is only supported for qarma at this time, not zenity or xdialog)
 
 
+An app can 'imply' multiple entries. These are usually instances of the app run with different arguments.
+
+```
+	app cxine implies=podcast-sn,podcast-twis
+  app podcast-sn title="Security Now Podcast" group=Podcasts invoke="cxine -podcast https://feeds.twit.tv/sn_video_hd.xml"
+  app podcast-twis title="This Week In Space Podcast" group=Podcasts invoke="cxine -podcast https://feeds.twit.tv/twis.xml"
+```
+
+
 2) override entries
 
 Override entries are app entries that mostly apply to apps discovered via .desktop files, and which override the settings of those .desktop files, changing the group, icon to display title of the app. For example:
@@ -249,6 +258,13 @@ Override entries have a special feature where multiple apps can be specified as 
 ```
 override Helm,PHASEX,IanniX,QMidiArp,Qtractor,drumkv1,samplv1,padthv1,synthv1,amsynth group=Music
 ```
+
+Overrides also support shell-style pattern matches, although this has some issues with libUseful versions earlier than v4.74. For example:
+
+```
+	override *Fight* group=FightingGames icons=fist
+```
+
 
 
 3) group entries

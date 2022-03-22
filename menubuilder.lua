@@ -26,10 +26,22 @@ end
 
 
 function ProcessAppOverrides(app)
-local name, config
+local name, config, item
 
 config=overrides_config[app.name]
 if config == nil then config=overrides_config[app.exec] end
+if config == nil
+then 
+  for name,item in pairs(overrides_config)
+  do
+		if strutil.pmatch(name, app.name) == true
+		then
+			config=item
+		end
+  end
+end
+
+
 if config ~= nil 
 then
 	if strutil.strlen(config.group) > 0 then app.group=config.group end
@@ -115,9 +127,9 @@ toks=strutil.TOKENIZER(implied_apps, ",")
 item=toks:next()
 while item ~= nil
 do
-config=app_configs[string.lower(item)]
-if config ~= nil and config.group ~=nil then MenuAddItem(config.group, config) end
-item=toks:next()
+	config=app_configs[string.lower(item)]
+	if config ~= nil and config.group ~=nil then MenuAddItem(config.group, config) end
+	item=toks:next()
 end
 
 end
@@ -453,6 +465,20 @@ local app, toks
 end
 
 
+function AppAdd(app)
+local name, config
+
+	name=string.lower(app.exec)
+	if strutil.strlen(app.group) ==0 then io.stderr:write( "ERROR: No group for app: "..str.."\n") end
+
+	config=app_configs[name]
+	if config == nil
+	then
+		app_configs[name]=app
+	end
+end
+
+
 function LoadConfig()
 local S, str, app, entry_type
 local toks, item
@@ -495,11 +521,7 @@ then
 			elseif entry_type=="app"
 			then
 				app=LoadAppConfig(toks)
-				if app ~= nil
-				then
-					if strutil.strlen(app.group) ==0 then io.stderr:write( "ERROR: No group for app: "..str.."\n") end
-					app_configs[string.lower(app.exec)]=app
-				end
+				if app ~= nil then AppAdd(app) end
 			end
 		end
 	
