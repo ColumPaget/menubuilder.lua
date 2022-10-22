@@ -17,9 +17,13 @@ icewm     https://ice-wm.org/
 pekwm     http://www.pekwm.org/
 mlvwm     http://www2u.biglobe.ne.jp/~y-miyata/mlvwm.html
 jwm       http://joewing.net/projects/jwm/
+fvwm      https://www.fvwm.org/
 pwm       https://tuomov.iki.fi/software/  https://github.com/Cougar/pwm
 vtwm      http://www.vtwm.org/
 ctwm      https://www.ctwm.org/index.html
+moonwm    https://github.com/jzbor/moonwm
+xmenu     https://github.com/phillbush/xmenu
+ctrlmenu  https://github.com/phillbush/ctrlmenu
 twm       
 
 
@@ -55,7 +59,7 @@ Options
 	-submenu [size]    For any groups that are not top-level and which contain less than <size> items, show the items in the parent group, rather than in a submenu.
 
 ```
-Multiple 'window manager' arguements can be supplied and can contain the following values:
+Multiple 'window manager' arguments can be supplied and can contain the following values:
 
 ```
 	all                this will write out menu files for all supported window managers
@@ -70,6 +74,9 @@ Multiple 'window manager' arguements can be supplied and can contain the followi
 	twm                write to file ~/.menu.twm
 	ctwm               write to file ~/.menu.ctwm
 	vtwm               write to file ~/.menu.vtwm
+	moonwm             write to file ~/.config/moonwm/favorites.xmenu
+	xmenu              write to file ~/.menu.xmenu
+	ctrlmenu           write to file ~/.menu.ctrlmenu
 	
 	stdout:blackbox    write blackbox menu to stdout
 	stdout:fluxbox     write fluxbox menu to stdout
@@ -80,8 +87,11 @@ Multiple 'window manager' arguements can be supplied and can contain the followi
 	stdout:jwm         write jwm menu to stdout
 	stdout:mlvwm       write mlvwm menu to stdout
 	stdout:twm         write twm menu to stdout
+	stdout:moonwm      write moonwm menu to stdout
 	stdout:ctwm        write ctwm menu to stdout
 	stdout:vtwm        write vtwm menu to stdout
+	stdout:xmenu       write xmenu menu to stdout
+	stdout:ctrlmenu    write ctrlmenu menu to stdout
 ```
 
 
@@ -97,6 +107,7 @@ Including the menus
 
 For icewm, blackbox, fluxbox and pekwm the menu should immediately become active. For the other window managers you'll need to include a path to the menu file in the window manager config.
 
+Paths that start with '/root/' indicate that you need to supply the actual path to your home directory. The 'root' user (with home directory '/root/') is just used as an example in these cases.
 
 For JWM add the line
 
@@ -106,6 +117,14 @@ For JWM add the line
 
 to your .menu.jwm file
 
+
+For fvwm add the line
+
+```
+	read /root/.fvwm/fvwm.menu
+```
+
+to your ~/.fvwm/config file
 
 
 For mlvwm add the line
@@ -162,10 +181,36 @@ to your .vtwmrc AND RUN VTWM AS 'vtwm -m'
 
 For pwm add the line
 ```
-include rootmenu.conf
+	include rootmenu.conf
 ```
 
 to your .pwm/pwm.conf. You may also need to delete or rename any existing rootmenu definition, say in default-menus.conf
+
+For xmenu you have to bind the following command to a keystroke or a mouse click somehow
+
+```
+	cat ~/.menu.xmenu | xmenu | sh
+```
+
+or you can build the menu on-the-fly with
+
+```
+	menubuilder.lua ctrlmenu:stdout | ctrlmenu
+```
+
+For ctrlmenu you have to bind the following command to a keystroke or a mouse click somehow
+
+```
+	cat ~/.menu.ctrlmenu | ctrlmenu
+```
+
+or you can build the menu on-the-fly with
+
+```
+	menubuilder.lua ctrlmenu:stdout | ctrlmenu
+```
+
+Note that the current version of ctrlmenu has a README.md file that appears to detail a different version of the program that has different command-line args.
 
 
 Icon Search System
@@ -183,7 +228,7 @@ the names suggested in the config file
 the name/filename of the application
 the group the application belongs to
 
-Icons are only currently supported for the JWM and IceWM window managers. Icons can be turned off altogether with the '-no-icons' command-line option.
+Icons are currently supported for the Openbox, JWM and IceWM window managers and the xmenu and ctrlmenu menu systems. Icons can be turned off altogether with the '-no-icons' command-line option.
 
 
 Window Manager Update

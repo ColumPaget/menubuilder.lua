@@ -138,7 +138,6 @@ end
 
 --[[
 --  ICON FIND FUNCS  ***************************************************
---
 ]]--
 
 function IconFind(name, path)
@@ -268,7 +267,6 @@ end
 
 --[[
 --  GENERATE QUERIES USING XDIALOG, ZENITY, QARMA, etc  ***************************************************
---
 ]]--
 
 
@@ -320,7 +318,6 @@ end
 
 --[[
 --  CONFIG FILE FUNCS ***************************************************
---
 ]]--
 
 -- load config for an application from details found in the main config file
@@ -536,7 +533,6 @@ end
 
 --[[
 --  DESKTOP FILES  ***************************************
---
 ]]--
 
 function AppChooseGroup(name, groups)
@@ -679,7 +675,6 @@ end
 
 --[[
 -- BLACKBOX/FLUXBOX/HACKEDBOX  ***************************************
---
 ]]--
 
 
@@ -756,7 +751,6 @@ end
 
 --[[
 -- OPENBOX  ***************************************
---
 ]]--
 
 
@@ -846,7 +840,6 @@ end
 
 --[[
 -- ICEWM  ***************************************
---
 ]]--
 
 function IceWM_ItemWrite(S, icon, item)
@@ -920,7 +913,6 @@ end
 
 --[[
 -- JWM  ***************************************
---
 ]]--
 
 
@@ -999,15 +991,106 @@ end
 
 
 
+--[[
+-- FVWM  ***************************************
+]]--
+
+
+function FVWM_ItemsWrite(S, group)
+local name, value, icon, str
+
+for name,item in pairs(group)
+do
+	if item.invoke ~= nil 
+	then 
+		str="+ \"" .. string.gsub(item.name, " ", "&");
+		icon=AppIconFind(item, settings.icon_path)
+--		if icon ~=nil then str=str.."%"..icon.."%" end
+		str=str.."\" Exec "..item.invoke
+
+		S:writeln(str .. "\n")
+	end
+end
+
+for name,item in pairs(group)
+do
+	if item.type=="group"
+	then
+		FVWM_SubmenuWrite(S, item)
+	end
+end
+
+end
+
+
+
+function FVWM_MenuOutput(S, name, icon, items, top_items)
+local item, subname
+
+str="\nDestroyMenu " .. string.gsub(name, " ", "_") .. "\n"
+str=str .."AddToMenu " .. string.gsub(name, " ", "_") .. " \"" .. name .."\" Title\n" 
+S:writeln(str)
+
+if top_items ~= nil 
+then 
+FVWM_ItemsWrite(S, top_items) 
+if #top_items > 0 then S:writeln("+ \"\" Nop\n") end
+end
+
+for i,item in ipairs(items)
+do
+	if item.type=="group" then 
+	subname=GroupInfoFind(item)
+	S:writeln("+ \""..item.name.."\" Popup " .. string.gsub(subname, " ", "_") .. "\n") 
+	end
+end
+
+end
+
+
+
+function FVWM_SubmenuWrite(S, group)
+local name,icon
+
+name,icon=GroupInfoFind(group)
+FVWM_MenuOutput(S, name, icon, group)
+FVWM_ItemsWrite(S, group)
+end
+
+
+
+function FVWM_MenuWrite(menu, Path)
+local i, item, S
+
+S=OpenOutputFile(Path)
+if S ~= nil
+then
+
+FVWM_MenuOutput(S, "MenuFvwmRoot", "", menu, faves_config)
+S:writeln("+ \"\" Nop\n")
+S:writeln("+ \"Refresh\" Refresh\n")
+S:writeln("+ \"Restart\" Restart\n")
+S:writeln("+ \"Quit\" Module FvwmScript FvwmScript-ConfirmQuit\n")
+
+
+FVWM_ItemsWrite(S, menu)
+
+
+S:close()
+
+end
+
+end
+
+
 
 --[[
 -- PEKWM  ***************************************
---
 ]]--
 
 
 function PekWM_ItemsWrite(S, group)
-local name, value, icon
+local name, value
 
 for name,item in pairs(group)
 do
@@ -1023,7 +1106,7 @@ end
 
 
 function PekWM_SubmenuWrite(S, group)
-local conf, name,icon
+local conf, name
 
 S:writeln("  Submenu = \"" .. group.name .."\" {\n")
 PekWM_ItemsWrite(S, group)
@@ -1061,12 +1144,11 @@ end
 
 --[[
 -- PWM  ***************************************
---
 ]]--
 
 
 function PWM_ItemsWrite(S, group)
-local name, value, icon
+local name, value
 
 for name,item in pairs(group)
 do
@@ -1082,7 +1164,7 @@ end
 
 
 function PWM_SubmenusWrite(S, group)
-local name, value, icon
+local name, value
 
 for name,item in pairs(group)
 do
@@ -1126,7 +1208,6 @@ end
 
 --[[
 -- MLVWM  ***************************************
---
 ]]--
 
 
@@ -1194,7 +1275,6 @@ end
 
 --[[
 -- MWM (Motif Window Manager) ***************************************
---
 ]]--
 
 
@@ -1262,6 +1342,136 @@ end
 end
 
 
+--[[
+-- X Menu  ***************************************
+]]--
+
+
+function XMenu_FormatItem(item, depth)
+local i, icon
+local str=""
+
+	for i=1,depth,1 do str=str.."	" end
+	icon=AppIconFind(item, settings.icon_path)
+	if icon ~= nil then str=str .. "IMG:" .. icon .. "	" end
+	str=str .. item.name
+	return str
+end
+
+
+function XMenu_ItemsWrite(S, group, depth)
+local name, item, str
+
+for name,item in pairs(group)
+do
+	if item.name ~= nil and item.type ~= "group"
+	then
+	str=XMenu_FormatItem(item, depth)
+	if item.invoke ~= nil then str=str .. "	" .. item.invoke end
+	S:writeln(str .."\n")
+	end
+end
+end
+
+
+function XMenu_SubmenuWrite(S, group, depth)
+local name, item
+
+if group.name ~= "RootMenu"
+then
+str=XMenu_FormatItem(group, depth)
+S:writeln(str .. '\n')
+end
+
+-- First go through and write out all the submenus
+for name,item in pairs(group)
+do
+	if item.type=="group" then XMenu_SubmenuWrite(S, item, depth + 1) end
+end
+
+XMenu_ItemsWrite(S, group, depth + 1)
+
+end
+
+
+
+function XMenu_MenuWrite(menu, Path)
+local S
+
+S=OpenOutputFile(Path)
+if S ~= nil
+then
+if #faves_config > 0 then XMenu_ItemsWrite(S, faves_config, -1) end
+XMenu_SubmenuWrite(S, menu, -1)
+S:close()
+end
+
+end
+
+
+
+--[[
+-- X Menu  ***************************************
+]]--
+
+
+function CtrlMenu_ItemsWrite(S, group, depth)
+local name, item, str, icon
+
+for name,item in pairs(group)
+do
+	if item.name ~= nil and item.type ~= "group"
+	then
+	str=item.name
+	icon=AppIconFind(item, settings.icon_path)
+--	if icon ~= nil then str=str.. " [#"..icon.."] " end
+	if item.invoke ~= nil then str=str .. "	-- " .. item.invoke end
+	S:writeln(str .."\n")
+	end
+end
+end
+
+
+function CtrlMenu_SubmenuWrite(S, group, depth)
+local name, item
+
+if group.name ~= "RootMenu"
+then
+S:writeln(group.name.. " {\n")
+end
+
+-- First go through and write out all the submenus
+for name,item in pairs(group)
+do
+	if item.type=="group" then CtrlMenu_SubmenuWrite(S, item, depth + 1) end
+end
+
+CtrlMenu_ItemsWrite(S, group, depth + 1)
+
+if group.name ~= "RootMenu"
+then
+S:writeln("\n}\n")
+end
+
+
+end
+
+
+
+function CtrlMenu_MenuWrite(menu, Path)
+local S
+
+S=OpenOutputFile(Path)
+if S ~= nil
+then
+if #faves_config > 0 then CtrlMenu_ItemsWrite(S, faves_config, -1) end
+CtrlMenu_SubmenuWrite(S, menu, -1)
+S:close()
+end
+
+end
+
+
 
 function OutputWindowManagerFiles()
 local toks, item
@@ -1288,6 +1498,9 @@ then
 		elseif item=="jwm" 
 		then
 			JWM_MenuWrite(sorted, process.getenv("HOME").."/.menu.jwm")
+		elseif item=="fvwm" 
+		then
+			FVWM_MenuWrite(sorted, process.getenv("HOME").."/.fvwm/fvwm.menu")
 		elseif item=="pekwm" 
 		then
 			PekWM_MenuWrite(sorted, process.getenv("HOME").."/.pekwm/menu")
@@ -1300,13 +1513,26 @@ then
 		elseif item=="twm" or item=="vtwm" or item=="ctwm" or item=="mwm"
 		then
 			TWM_MenuWrite(sorted, process.getenv("HOME").."/.menu."..item)
+		elseif item=="moonwm" 
+		then
+			XMenu_MenuWrite(sorted, process.getenv("HOME").."/.config/moonwm/favorites.xmenu")
+		elseif item=="xmenu" 
+		then
+			XMenu_MenuWrite(sorted, process.getenv("HOME").."/.xmenu.menu")
+		elseif item=="ctrlmenu" 
+		then
+			CtrlMenu_MenuWrite(sorted, process.getenv("HOME").."/.ctrlmenu.menu")
 		elseif item=="stdout:blackbox" or item=="stdout:fluxbox" then Blackbox_MenuWrite(sorted, "-")
 		elseif item=="stdout:icewm" then IceWM_MenuWrite(sorted, "-")
 		elseif item=="stdout:pekwm" then PekWM_MenuWrite(sorted, "-")
 		elseif item=="stdout:jwm" then JWM_MenuWrite(sorted, "-")
+		elseif item=="stdout:fvwm" then FVWM_MenuWrite(sorted, "-")
 		elseif item=="stdout:twm" then TWM_MenuWrite(sorted, "-")
 		elseif item=="stdout:vtwm" then TWM_MenuWrite(sorted, "-")
 		elseif item=="stdout:ctwm" then TWM_MenuWrite(sorted, "-")
+		elseif item=="stdout:moonwm" then XMenu_MenuWrite(sorted, "-")
+		elseif item=="stdout:xmenu" then XMenu_MenuWrite(sorted, "-")
+		elseif item=="stdout:ctrlmenu" then CtrlMenu_MenuWrite(sorted, "-")
 		end
 end
 
@@ -1552,6 +1778,9 @@ print("   jwm                write to file ~/.menu.jwm")
 print("   twm                write to file ~/.menu.twm")
 print("   ctwm               write to file ~/.menu.ctwm")
 print("   vtwm               write to file ~/.menu.vtwm")
+print("   moonwm             write to file ~/.config/moonwm/favorites")
+print("   xmenu              write to file ~/.menu.xmenu")
+print("   ctrlmenu           write to file ~/.menu.ctrlmenu")
 print(" ")
 print("   stdout:blackbox    write blackbox menu to stdout")
 print("   stdout:fluxbox     write fluxbox menu to stdout")
@@ -1564,6 +1793,9 @@ print("   stdout:jwm         write jwm menu to stdout")
 print("   stdout:twm         write twm menu to stdout")
 print("   stdout:ctwm        write ctwm menu to stdout")
 print("   stdout:vtwm        write vtwm menu to stdout")
+print("   stdout:moonwm      write moonwm menu to stdout")
+print("   stdout:xmenu       write xmenu menu to stdout")
+print("   stdout:ctrlmenu    write ctrlmenu menu to stdout")
 print("")
 
 print("example:")
@@ -1616,7 +1848,7 @@ elseif arg=="-?" or arg=="-h" or arg=="-help" or arg=="--help"
 then
 	DisplayHelp()
 	os.exit(0)
-elseif arg=="all" then settings.output="jwm,twm,vtwm,ctwm,pwm,icewm,pekwm,mlvwm,blackbox,fluxbox,openbox"
+elseif arg=="all" then settings.output="jwm,twm,vtwm,ctwm,pwm,icewm,pekwm,mlvwm,blackbox,fluxbox,openbox,moonwm,xmenu,ctrlmenu"
 else settings.output=settings.output .. args[i]..","
 end
 
