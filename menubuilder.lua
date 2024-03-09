@@ -6,6 +6,7 @@ require("dataparser")
 
 
 
+
 settings={}
 group_configs={}
 app_configs={}
@@ -13,6 +14,130 @@ menu_config={}
 faves_config={}
 overrides_config={}
 icon_cache={}
+
+function DisplayHelp()
+
+print("usage:")
+print("")
+print(" lua menubuilder.lua [options] [window manager] [window manager] ...")
+print("")
+
+print("options:")
+print("")
+
+print("  -c                 path to config file, if not supplied then ~/.menubuilder.conf will be tried, followed by /etc/menubuilder.conf")
+print("  -faves [items]     a list of program names to include above everthing else on the top menu")
+print("  -icons [path]      add a colon-separated list of paths under which to search for icons")
+print("  -no-icons          do not find icons for the menu")
+print("  -t [app]           terminal app to use for terminal programs, defaults to 'xterm'")
+print("  -term [app]        terminal app to use for terminal programs, defaults to 'xterm'")
+print("  -dialogs [app]     dialog app to use for programs that need additional info. Choices are 'xdialog', 'zenity' or 'qarma'. Defaults to 'no dialogs'. If no dialog app is set then entries for apps requring dialogs will not be added to the menu.")
+print("  -misc [size]       Merge any top-level menus that contain less than <size> items into a single 'miscellaneous' top-level group.")
+print("  -submenu [size]    For any groups that are not top-level and which contain less than <size> items, show the items in the parent group, rather than in a submenu.")
+
+print("")
+
+print("supported window managers:")
+print("Multiple 'window manager' arguments can be supplied and can contain the following values:")
+print("")
+print("   all                this will write out menu files for all supported window managers")
+print("   blackbox           write to file ~/.blackbox/menu")
+print("   fluxbox            write to file ~/.fluxbox/menu")
+print("   openbox            write to file ~/.config/openbox/menu.xml")
+print("   icewm              write to file ~/.icewm/menu")
+print("   pekwm              write to file ~/.pekwm/menu")
+print("   mlvwm              write to file ~/.menu.mlvwm")
+print("   pwm                write to file ~/.pwm/rootmenu.conf")
+print("   jwm                write to file ~/.menu.jwm")
+print("   twm                write to file ~/.menu.twm")
+print("   ctwm               write to file ~/.menu.ctwm")
+print("   vtwm               write to file ~/.menu.vtwm")
+print("   moonwm             write to file ~/.config/moonwm/favorites")
+print("   xmenu              write to file ~/.menu.xmenu")
+print("   ctrlmenu           write to file ~/.menu.ctrlmenu")
+print(" ")
+print("   stdout:blackbox    write blackbox menu to stdout")
+print("   stdout:fluxbox     write fluxbox menu to stdout")
+print("   stdout:openbox     write fluxbox menu to stdout")
+print("   stdout:icewm       write icewm menu to stdout")
+print("   stdout:pekwm       write pekwm menu to stdout")
+print("   stdout:mlvwm       write mlvwm menu to stdout")
+print("   stdout:pwm         write pwm menu to stdout")
+print("   stdout:jwm         write jwm menu to stdout")
+print("   stdout:twm         write twm menu to stdout")
+print("   stdout:ctwm        write ctwm menu to stdout")
+print("   stdout:vtwm        write vtwm menu to stdout")
+print("   stdout:moonwm      write moonwm menu to stdout")
+print("   stdout:xmenu       write xmenu menu to stdout")
+print("   stdout:ctrlmenu    write ctrlmenu menu to stdout")
+print("")
+
+print("example:")
+print("")
+print("  MenuBuilder.lua -faves xterm,links,smplayer jwm icewm")
+
+
+end
+
+
+
+function ParseCommandLine(args)
+for i,arg in ipairs(args)
+do
+
+if arg == "-c" 
+then 
+	settings.config=args[i+1]
+	args[i+1]=""
+elseif arg == "-faves" 
+then 
+	settings.faves=args[i+1]
+	args[i+1]=""
+elseif arg == "-icons" 
+then
+	settings.icon_path=settings.icon_path .. args[i+1] .. ":"
+	args[i+1]=""
+elseif arg == "-no-icons" 
+then
+	settings.find_icons=false
+elseif arg == "-s" or arg == "-submenu"
+then
+	settings.submenu_size=tonumber(args[i+1])
+	if settings.submenu_size==nil then settings.submenu_size=0 end
+	args[i+1]=""
+elseif arg == "-m" or arg == "-misc"
+then
+	settings.misc_group=tonumber(args[i+1])
+	if settings.misc_group==nil then settings.misc_group=0 end
+	args[i+1]=""
+elseif arg== "-dialogs"
+then
+	DialogApp(args[i+1])
+	args[i+1]=""
+elseif arg=="-t" or arg=="-term"
+then
+	settings.term=args[i+1]
+	args[i+1]=""
+elseif arg=="-?" or arg=="-h" or arg=="-help" or arg=="--help"
+then
+	DisplayHelp()
+	os.exit(0)
+elseif arg=="all" then settings.output="jwm,twm,vtwm,ctwm,pwm,icewm,pekwm,mlvwm,blackbox,fluxbox,openbox,moonwm,xmenu,ctrlmenu"
+else settings.output=settings.output .. args[i]..","
+end
+
+end
+
+end
+
+
+
+
+--[[
+--  CONFIG FILE FUNCS ***************************************************
+]]--
+
+
 
 
 function Capitalize(str)
@@ -24,301 +149,6 @@ retstr=retstr .. string.sub(str, 2)
 return retstr
 end
 
-
-function ProcessAppOverrides(app)
-local name, config, item
-
-config=overrides_config[app.name]
-if config == nil then config=overrides_config[app.exec] end
-if config == nil
-then 
-  for name,item in pairs(overrides_config)
-  do
-		if strutil.pmatch(name, app.name) == true
-		then
-			config=item
-		end
-  end
-end
-
-
-if config ~= nil 
-then
-	if strutil.strlen(config.group) > 0 then app.group=config.group end
-	if strutil.strlen(config.icon) > 0 then app.icon=config.icon end
-	if config.termapp == true then app.termapp=true end
-	if config.ignore == true then app.ignore=true end
-	if config.query == true then app.query=true end
-end
-
-end
-
-
-
-function NewApp(source, name, exec)
-local app={}
-
-app.type="app"
-app.name=name
-app.termapp=false
-app.ignore=false
-app.query=false
-app.fileselect=false
-app.source=source
-app.exec=exec
-
-return app
-end
-
-
-function NewGroup(name)
-if group_configs[name]==nil 
-then 
-	group_configs[name]={} 
-	group_configs[name].ignore=false
-	group_configs[name].icons=""
-end
-
-return group_configs[name]
-end
-
-
-
-
-function MenuAddGroup(group)
-local conf, parent
-
-if strutil.strlen(group) ==0 then return nil end
-conf=group_configs[group]
-
-if conf ~=nil and conf.parent ~=nil
-then
-	parent=MenuAddGroup(conf.parent)
-else
-	parent=menu_config
-end
-
-if parent[group] == nil 
-then 
-		parent[group]={} 
-		parent[group].type="group"
-		parent[group].name=group
---		parent[group].size=0
-end
-
-return parent[group]
-end
-
-
-function MenuAddItem(menu_name, item)
-local group
-
-group=MenuAddGroup(menu_name)
-if group ~= nil then table.insert(group, item) end
-
-end
-
-
-function ProcessImpliedApps(implied_apps)
-local toks, item, config
-
-
-toks=strutil.TOKENIZER(implied_apps, ",")
-item=toks:next()
-while item ~= nil
-do
-	config=app_configs[string.lower(item)]
-	if config ~= nil and config.group ~=nil then MenuAddItem(config.group, config) end
-	item=toks:next()
-end
-
-end
-
-
-
---[[
---  ICON FIND FUNCS  ***************************************************
-]]--
-
-function IconFind(name, path)
-local extn_list={".PNG",".png",".JPG",".jpg",".JPEG",".jpeg"}
-local str, i, extn
-
-if settings.find_icons == false then return end
-if strutil.strlen(name) < 1 then return(nil) end
-if icon_cache[name] ~=nil 
-then
-	return icon_cache[name] 
-end
-
-return nil
-end	
-
-
-
-function IconFindFromList(icon_list)
-local toks, name, icon
-
-
-if settings.find_icons == false then return end
-toks=strutil.TOKENIZER(icon_list, ",")
-name=toks:next()
-while name ~= nil
-do
-	icon=IconFind(name, settings.icon_path)
-	if icon ~=nil then return icon end
-
-	name=toks:next()
-end
-
-return nil
-end
-
-
-function IconsLoad(path)
-local toks, dir
-
-if settings.find_icons == false then return end
-
-toks=strutil.TOKENIZER(path, ":")
-dir=toks:next()
-while dir ~= nil
-do
-	files=filesys.GLOB(dir.."*.[jJpP]*[gG]")
-	file=files:next()
-	while file ~= nil
-	do
-		extn=string.lower(filesys.extn(file))
-		if extn==".jpg" or extn==".jpeg" or extn==".png"
-		then
-			name=filesys.basename(file)
-			name=string.sub(name, 1, string.len(name)-string.len(extn))
-			if icon_cache[name] == nil then icon_cache[name]=file end
-		end
-		file=files:next()
-	end
-	dir=toks:next()
-end
-
-end
-
-
-
-function GroupInfoFind(group)
-local conf, name 
-local icon=nil
-
-conf=group_configs[group.name]
-if conf ~= nil 
-then
-	if strutil.strlen(conf.name) > 0 then name=conf.name end
-	if settings.find_icons == true
-	then
-		if strutil.strlen(conf.icons) > 0 then conf.icon=IconFindFromList(conf.icons) end
-		if conf.icon ~= nil then icon=conf.icon end
-	end
-end
-
-if name == nil then name=group.name end
-if icon == nil
-then
-	if settings.find_icons == true 
-	then 
-		icon=IconFindFromList("folder") 
-	else
-		icon=""
-	end
-end
-
-return name, icon
-end
-
-
-
-function AppIconFind(app, path)
-local icon, conf
-
-if settings.find_icons == false then return nil end
-if strutil.strlen(app.icon) > 0 and filesys.exists(app.icon) == true then return app.icon end
-
-icon=IconFind(app.icon, path)
-if icon ~= nil then return icon end
-
-icon=IconFind(app.exec, path)
-if icon ~= nil then return icon end
-
-icon=IconFind(app.name, path)
-if icon ~= nil then return icon end
-
-icon=IconFindFromList(app.icons)
-if icon ~= nil then return icon end
-
-icon=IconFindFromList(app.groups)
-if icon ~= nil then return icon end
-
-conf=group_configs[app.group]
-if conf ~= nil and conf.icon ~= nil then return conf.icon end
-
-return nil
-end
-
-
-
-
---[[
---  GENERATE QUERIES USING XDIALOG, ZENITY, QARMA, etc  ***************************************************
-]]--
-
-
-function DialogApp(basename)
-
-if basename=="xdialog"
-then
-	settings.query=basename.." --inputbox '$title'"
-elseif basename=="zenity"
-then
-	settings.query=basename.." --entry --title '$title'"
-	settings.fileselect=basename.." --file-selection --multiple --title '$title'"
-elseif basename=="qarma"
-then
-	settings.query=basename.." --entry --title '$title'"
-	settings.fileselect=basename.." --file-selection --multiple --title '$title' --file-filter '$filter'"
-else io.stderr:write("ERROR: Dialog system '"..basename.."' unknown.")
-end
-
-end
-
-
-function QueryGenerate(app)
-local str
-local	title=""
-
-	if strutil.strlen(app.query_title) > 0 then title=app.query_title end
-	str=string.gsub(settings.query, "%$title", title)
-
-	return "/bin/sh -c \"".. app.invoke .. " `" .. str .. "`\""
-end
-
-
-
-function FileSelectGenerate(app) 
-	local str
-	local title=""
-	local filter="*"
-
-	if strutil.strlen(app.query_title) > 0 then title=app.query_title end
-	str=string.gsub(settings.fileselect, "%$title", title)
-	if strutil.strlen(app.query_filter) > 0 then filter=app.query_filter end
-	str=string.gsub(str, "%$filter", filter)
-
-	return "/bin/sh -c \"".. app.invoke .. " `" .. str .. "`\""
-end
-
-
-
---[[
---  CONFIG FILE FUNCS ***************************************************
-]]--
 
 -- load config for an application from details found in the main config file
 function LoadAppConfig(config)
@@ -476,28 +306,18 @@ local name, config
 end
 
 
-function LoadConfig()
-local S, str, app, entry_type
-local toks, item
+function ConfigFileRead(path)
+local S, str, toks, entry_type, app
+local result=false
 
-toks=strutil.TOKENIZER(settings.config, ":")
-if toks==nil then return end
-
-item=toks:next()
-while item ~= nil
-do
-	S=stream.STREAM(item, "r")
-	if S ~= nil then break end
-	io.stderr:write( "config file: '"..item.."' ... not found\n")
-	item=toks:next()
-end
-
+S=stream.STREAM(path, "r")
 if S ~= nil
 then
-	io.stderr:write( "config file: '"..item.."' ... opened successfully\n")
+	io.stderr:write( "config file: '".. path .."' ... opened successfully\n")
 	str=S:readln()
 	while str~= nil
 	do
+		result=true
 		str=strutil.stripTrailingWhitespace(str)
 		if strutil.strlen(str) > 0
 		then
@@ -527,8 +347,37 @@ then
 S:close()
 end
 
+return result
 end
 
+
+
+function LoadConfig()
+local toks, item, files, i, path
+local result=false
+
+toks=strutil.TOKENIZER(settings.config, ":")
+if toks==nil then return end
+
+item=toks:next()
+while item ~= nil
+do
+	files=filesys.GLOB(item)
+	path=files:next()
+	while path ~= nil
+	do
+	result=ConfigFileRead(path)
+	path=files:next()
+	end
+	
+	if result==true then break
+  else io.stderr:write( "config file: '"..item.."' ... not found\n")
+	end
+
+	item=toks:next()
+end
+
+end
 
 
 --[[
@@ -649,27 +498,154 @@ end
 end
 
 
+--[[
+--  ICON FIND FUNCS  ***************************************************
+]]--
 
-function OpenOutputFile(Path)
-local S
+function IconFind(srcname, path)
+local str, i, extn, name
 
--- don't try to create or rename stdout!
-if Path ~= "-" 
-then 
-	filesys.mkdirPath(Path)
-	filesys.rename(Path, Path.."-")
-end
+if settings.find_icons == false then return end
+if strutil.strlen(srcname) < 1 then return(nil) end
 
-S=stream.STREAM(Path, "w")
-if S==nil
+name=string.lower(srcname)
+if icon_cache[name] ~=nil 
 then
-	io.stderr:write( "ERROR: Failed to open output '"..Path.."'\n")
-else
-	io.stderr:write( "writing to: "..Path.."\n")
+	return icon_cache[name] 
 end
 
-return(S)
+return nil
+end	
+
+
+
+function IconFindFromList(icon_list)
+local toks, name, icon
+
+
+if settings.find_icons == false then return end
+toks=strutil.TOKENIZER(icon_list, ",")
+name=toks:next()
+while name ~= nil
+do
+	icon=IconFind(name, settings.icon_path)
+	if icon ~=nil then return icon end
+
+	name=toks:next()
 end
+
+return nil
+end
+
+
+function IconsLoad(path)
+local toks, dir
+
+if settings.find_icons == false then return end
+
+toks=strutil.TOKENIZER(path, ":")
+dir=toks:next()
+while dir ~= nil
+do
+	files=filesys.GLOB(dir.."*.[jJpP]*[gG]")
+	file=files:next()
+	while file ~= nil
+	do
+		extn=string.lower(filesys.extn(file))
+		if extn==".jpg" or extn==".jpeg" or extn==".png"
+		then
+			name=filesys.basename(file)
+			name=string.sub(name, 1, string.len(name)-string.len(extn))
+			name=string.lower(name)
+			if icon_cache[name] == nil then icon_cache[name]=file end
+		end
+		file=files:next()
+	end
+	dir=toks:next()
+end
+
+end
+
+
+function AppIconFind(app, path)
+local icon, conf
+
+if settings.find_icons == false then return nil end
+if strutil.strlen(app.icon) > 0 and filesys.exists(app.icon) == true then return app.icon end
+
+icon=IconFind(app.icon, path)
+if icon ~= nil then return icon end
+
+icon=IconFind(app.exec, path)
+if icon ~= nil then return icon end
+
+icon=IconFind(app.name, path)
+if icon ~= nil then return icon end
+
+icon=IconFindFromList(app.icons)
+if icon ~= nil then return icon end
+
+icon=IconFindFromList(app.groups)
+if icon ~= nil then return icon end
+
+conf=group_configs[app.group]
+if conf ~= nil and conf.icon ~= nil then return conf.icon end
+
+return nil
+end
+
+
+
+
+--[[
+--  GENERATE QUERIES USING XDIALOG, ZENITY, QARMA, etc  ***************************************************
+]]--
+
+
+function DialogApp(basename)
+
+if basename=="xdialog"
+then
+	settings.query=basename.." --inputbox '$title'"
+elseif basename=="zenity"
+then
+	settings.query=basename.." --entry --title '$title'"
+	settings.fileselect=basename.." --file-selection --multiple --title '$title'"
+elseif basename=="qarma"
+then
+	settings.query=basename.." --entry --title '$title'"
+	settings.fileselect=basename.." --file-selection --multiple --title '$title' --file-filter '$filter'"
+else io.stderr:write("ERROR: Dialog system '"..basename.."' unknown.")
+end
+
+end
+
+
+function QueryGenerate(app)
+local str
+local	title=""
+
+	if strutil.strlen(app.query_title) > 0 then title=app.query_title end
+	str=string.gsub(settings.query, "%$title", title)
+
+	return "/bin/sh -c \"".. app.invoke .. " `" .. str .. "`\""
+end
+
+
+
+function FileSelectGenerate(app) 
+	local str
+	local title=""
+	local filter="*"
+
+	if strutil.strlen(app.query_title) > 0 then title=app.query_title end
+	str=string.gsub(settings.fileselect, "%$title", title)
+	if strutil.strlen(app.query_filter) > 0 then filter=app.query_filter end
+	str=string.gsub(str, "%$filter", filter)
+
+	return "/bin/sh -c \"".. app.invoke .. " `" .. str .. "`\""
+end
+
 
 
 
@@ -747,248 +723,6 @@ then
 end
 
 end
-
-
---[[
--- OPENBOX  ***************************************
-]]--
-
-
-function Openbox_ItemWrite(S, item)
-local invoke
-
-	if item.type=="group" 
-	then 
-		Openbox_SubmenuWrite(S, item.name, item)
-	elseif item.invoke ~= nil 
-	then
-		icon=AppIconFind(item, settings.icon_path)
-		if icon==nil then icon="" end
-
-		-- blackbox dequotes these when running them
-		invoke=string.gsub(item.invoke, "\\", "\\\\")
-
-		--if there's arguments then it's likely that some form of shell replacement (e.g. '*') or shell variables are
-		--being used, so we run this command under a shell
-		if string.find(invoke, ' ') ~= nil
-		then
-			S:writeln("<item label=\"" .. item.name.. "\" icon=\""..icon.."\"><action name=\"Execute\"><command>/bin/sh -c \"" .. invoke.."\"</command></action></item>\n") 
-		else
-			S:writeln("<item label=\"" .. item.name.. "\" icon=\""..icon.."\"><action name=\"Execute\"><command>" .. invoke.."</command></action></item>\n") 
-		end
-	end
-end
- 
-
-function Openbox_ItemsWrite(S, items)
-local name, item
-
-for name,item in pairs(items)
-do
-	Openbox_ItemWrite(S, item)
-end
-end
-
-
-function Openbox_SubmenuWrite(S, title, group)
-local name, icon
-
-name,icon=GroupInfoFind(group)
-if icon == nil then icon="" end
-
-S:writeln("<menu id=\""..title.. "\" label=\""..title.."\" icon=\"" .. icon.. "\">\n")
-Openbox_ItemsWrite(S, group)
-S:writeln("</menu>\n")
-
-end
-
-function Openbox_MenuWrite(menu, Path)
-local i, item, S
-
-S=OpenOutputFile(Path)
-if S ~= nil
-then
-	S:writeln("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
-  S:writeln("<openbox_menu xmlns=\"http://openbox.org/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"  xsi:schemaLocation=\"http://openbox.org/ file:///usr/share/openbox/menu.xsd\">\n")
-	S:writeln("<menu id=\"root-menu\" label=\"Openbox\">\n")
-
-	if #faves_config > 0
-	then
-	Openbox_ItemsWrite(S, faves_config)
-	S:writeln("<separator />\n")
-	end
-
-
-	Openbox_ItemsWrite(S, menu)
-	S:writeln("<separator />\n")
-	S:writeln("<item label=\"Reconfigure\"><action name=\"Reconfigure\"/></item>\n") 
-	S:writeln("<item label=\"Restart\"><action name=\"Restart\"/></item>\n") 
-	S:writeln("<item label=\"Exit\"><action name=\"Exit\"/></item>\n") 
-
-	S:writeln("</menu>\n")
-  S:writeln("</openbox_menu>\n")
-	S:close()
-
-	os.execute("openbox --reconfigure")
-end
-
-end
-
-
-
-
-
---[[
--- ICEWM  ***************************************
-]]--
-
-function IceWM_ItemWrite(S, icon, item)
-local toks, str, exec
-
-	if item.invoke ~=nil 
-	then
-		toks=strutil.TOKENIZER(item.invoke, " ")
-		str=toks:next() 
-
-		-- first token appears to be an environment variable setter, run this
-		-- in a shell
-		if string.find(str, "=") ~= nil
-		then
-			S:writeln("prog \"" .. item.name .. "\" \"" .. icon .. "\" /bin/sh -c \"" .. item.invoke.."\"\n") 
-		else
-			S:writeln("prog \"" .. item.name .. "\" \"" .. icon .. "\" " .. item.invoke.."\n") 
-		end
-	end
-
-end
-
-function IceWM_SubmenuWrite(S, group)
-local name, value, icon
-
-for name,item in pairs(group)
-do
-	if item.type=="group"
-	then
-		name,icon=GroupInfoFind(item)
-		if icon==nil then icon="" end
-
-		S:writeln("menu \"" .. name .. "\" \"".. icon .. "\" {\n")
-		IceWM_SubmenuWrite(S, item)
-		S:writeln("}\n\n")
-	else
-		icon=AppIconFind(item, settings.icon_path)
-		if strutil.strlen(icon) == 0 then icon=item.name end	
-		IceWM_ItemWrite(S, icon, item)
-	end
-end
-
-end
-
-
-function IceWM_MenuWrite(menu, Path)
-local i, name, item, icon,  S
-
-S=OpenOutputFile(Path)
-if S ~= nil
-then
-
-if #faves_config > 0
-then
-	IceWM_SubmenuWrite(S, faves_config)
-	S:writeln("separator\n")
-end
-
-
-IceWM_SubmenuWrite(S, menu)
-S:close()
-
-os.execute("icewm --restart")
-end
-
-end
-
-
-
-
-
---[[
--- JWM  ***************************************
-]]--
-
-
-function JWM_ItemsWrite(S, group)
-local name, value, icon
-
-for name,item in pairs(group)
-do
-	if item.type=="group"
-	then
-		JWM_SubmenuWrite(S, item)
-	elseif item.invoke ~= nil 
-	then 
-		icon=AppIconFind(item, settings.icon_path)
-		if icon ~=nil
-		then
-			S:writeln("  <Program label=\"".. item.name .. "\" icon=\""..icon.."\">" .. item.invoke .. "</Program>\n")
-		else
-			S:writeln("  <Program label=\"".. item.name .. "\">" .. item.invoke .. "</Program>\n")
-		end
-	end
-end
-end
-
-
-function JWM_SubmenuWrite(S, group)
-local conf, name,icon
-
-name,icon=GroupInfoFind(group)
-if icon ~= nil
-then
-	S:writeln("  <Menu icon=\""..icon.."\" label=\"" .. name .."\">\n")
-else
-	S:writeln("  <Menu label=\"" .. name .."\">\n")
-end
-
-JWM_ItemsWrite(S, group)
-
-S:writeln("  </Menu>\n")
-end
-
-
-
-function JWM_MenuWrite(menu, Path)
-local i, item, S
-
-S=OpenOutputFile(Path)
-if S ~= nil
-then
-
-S:writeln("<?xml version=\"1.0\"?>\n")
-S:writeln("<JWM>\n")
-S:writeln("<RootMenu>\n")
-
-if #faves_config > 0
-then
-JWM_ItemsWrite(S, faves_config)
-S:writeln("<Separator/>\n")
-end
-
-JWM_ItemsWrite(S, menu)
-
-S:writeln("<Separator/>\n")
-S:writeln("<Restart label=\"Restart\" icon=\"restart.png\"/>\n")
-S:writeln("<Exit label=\"Exit\" confirm=\"true\" icon=\"quit.png\"/>\n")
-S:writeln("</RootMenu>\n")
-S:writeln("</JWM>\n")
-
-
-S:close()
-
-os.execute("jwm -reload")
-end
-
-end
-
 
 
 --[[
@@ -1082,6 +816,306 @@ end
 
 end
 
+
+
+--[[
+-- ICEWM  ***************************************
+]]--
+
+function IceWM_ItemWrite(S, icon, item)
+local toks, str, exec
+
+	if item.invoke ~=nil 
+	then
+		toks=strutil.TOKENIZER(item.invoke, " ")
+		str=toks:next() 
+
+		-- first token appears to be an environment variable setter, run this
+		-- in a shell
+		if string.find(str, "=") ~= nil
+		then
+			S:writeln("prog \"" .. item.name .. "\" \"" .. icon .. "\" /bin/sh -c \"" .. item.invoke.."\"\n") 
+		else
+			S:writeln("prog \"" .. item.name .. "\" \"" .. icon .. "\" " .. item.invoke.."\n") 
+		end
+	end
+
+end
+
+function IceWM_SubmenuWrite(S, group)
+local name, value, icon
+
+for name,item in pairs(group)
+do
+	if item.type=="group"
+	then
+		name,icon=GroupInfoFind(item)
+		if icon==nil then icon="" end
+
+		S:writeln("menu \"" .. name .. "\" \"".. icon .. "\" {\n")
+		IceWM_SubmenuWrite(S, item)
+		S:writeln("}\n\n")
+	else
+		icon=AppIconFind(item, settings.icon_path)
+		if strutil.strlen(icon) == 0 then icon=item.name end	
+		IceWM_ItemWrite(S, icon, item)
+	end
+end
+
+end
+
+
+function IceWM_MenuWrite(menu, Path)
+local i, name, item, icon,  S
+
+S=OpenOutputFile(Path)
+if S ~= nil
+then
+
+if #faves_config > 0
+then
+	IceWM_SubmenuWrite(S, faves_config)
+	S:writeln("separator\n")
+end
+
+
+IceWM_SubmenuWrite(S, menu)
+S:close()
+
+os.execute("icewm --restart")
+end
+
+end
+
+--[[
+-- JWM  ***************************************
+]]--
+
+
+function JWM_ItemsWrite(S, group)
+local name, value, icon
+
+for name,item in pairs(group)
+do
+	if item.type=="group"
+	then
+		JWM_SubmenuWrite(S, item)
+	elseif item.invoke ~= nil 
+	then 
+		icon=AppIconFind(item, settings.icon_path)
+		if icon ~=nil
+		then
+			S:writeln("  <Program label=\"".. item.name .. "\" icon=\""..icon.."\">" .. item.invoke .. "</Program>\n")
+		else
+			S:writeln("  <Program label=\"".. item.name .. "\">" .. item.invoke .. "</Program>\n")
+		end
+	end
+end
+end
+
+
+function JWM_SubmenuWrite(S, group)
+local conf, name,icon
+
+name,icon=GroupInfoFind(group)
+if icon ~= nil
+then
+	S:writeln("  <Menu icon=\""..icon.."\" label=\"" .. name .."\">\n")
+else
+	S:writeln("  <Menu label=\"" .. name .."\">\n")
+end
+
+JWM_ItemsWrite(S, group)
+
+S:writeln("  </Menu>\n")
+end
+
+
+
+function JWM_MenuWrite(menu, Path)
+local i, item, S
+
+S=OpenOutputFile(Path)
+if S ~= nil
+then
+
+S:writeln("<?xml version=\"1.0\"?>\n")
+S:writeln("<JWM>\n")
+S:writeln("<RootMenu>\n")
+
+if #faves_config > 0
+then
+JWM_ItemsWrite(S, faves_config)
+S:writeln("<Separator/>\n")
+end
+
+JWM_ItemsWrite(S, menu)
+
+S:writeln("<Separator/>\n")
+S:writeln("<Restart label=\"Restart\" icon=\"restart.png\"/>\n")
+S:writeln("<Exit label=\"Exit\" confirm=\"true\" icon=\"quit.png\"/>\n")
+S:writeln("</RootMenu>\n")
+S:writeln("</JWM>\n")
+
+
+S:close()
+
+os.execute("jwm -reload")
+end
+
+end
+
+--[[
+-- MLVWM  ***************************************
+]]--
+
+
+function MLVWM_ItemsWrite(S, group)
+local conf, name, item
+
+for name,item in pairs(group)
+do
+	if item.type=="group"
+	then
+		S:writeln("  \""..item.name.. "\" SubMenu " .. string.gsub(item.name, " ", "_").. "\n")
+	elseif item.invoke ~= nil 
+	then 
+			S:writeln(" \"".. item.name .. "\" Action Exec \"" ..item.name .. "\" exec " .. item.invoke .. "\n")
+	end
+end
+end
+
+
+function MLVWM_SubmenuWrite(S, group)
+local name, item
+
+-- First go through and write out all the submenus
+for name,item in pairs(group)
+do
+	if item.type=="group" then MLVWM_SubmenuWrite(S, item) end
+end
+
+
+S:writeln("Menu " .. string.gsub(group.name, " ", "_") .. ", Label \"" .. group.name .. "\"\n")
+
+if group.name=="RootMenu" and #faves_config > 0
+then
+	MLVWM_ItemsWrite(S, faves_config)
+	S:writeln("\"\" NonSelect\n")
+end
+
+
+MLVWM_ItemsWrite(S, group)
+
+if group.name == "RootMenu"
+then
+	S:writeln("\"\" NonSelect\n")
+	S:writeln("\"Restart\" Action Restart mlvwm\n")
+	S:writeln("\"Exit\" Action Exit\n")
+end
+
+S:writeln("END\n\n")
+end
+
+
+
+function MLVWM_MenuWrite(menu, Path)
+local i, item, S
+
+S=OpenOutputFile(Path)
+if S ~= nil
+then
+	MLVWM_SubmenuWrite(S, menu)
+	S:close()
+end
+
+end
+
+
+--[[
+-- OPENBOX  ***************************************
+]]--
+
+
+function Openbox_ItemWrite(S, item)
+local invoke
+
+	if item.type=="group" 
+	then 
+		Openbox_SubmenuWrite(S, item.name, item)
+	elseif item.invoke ~= nil 
+	then
+		icon=AppIconFind(item, settings.icon_path)
+		if icon==nil then icon="" end
+
+		-- blackbox dequotes these when running them
+		invoke=string.gsub(item.invoke, "\\", "\\\\")
+
+		--if there's arguments then it's likely that some form of shell replacement (e.g. '*') or shell variables are
+		--being used, so we run this command under a shell
+		if string.find(invoke, ' ') ~= nil
+		then
+			S:writeln("<item label=\"" .. item.name.. "\" icon=\""..icon.."\"><action name=\"Execute\"><command>/bin/sh -c \"" .. invoke.."\"</command></action></item>\n") 
+		else
+			S:writeln("<item label=\"" .. item.name.. "\" icon=\""..icon.."\"><action name=\"Execute\"><command>" .. invoke.."</command></action></item>\n") 
+		end
+	end
+end
+ 
+
+function Openbox_ItemsWrite(S, items)
+local name, item
+
+for name,item in pairs(items)
+do
+	Openbox_ItemWrite(S, item)
+end
+end
+
+
+function Openbox_SubmenuWrite(S, title, group)
+local name, icon
+
+name,icon=GroupInfoFind(group)
+if icon == nil then icon="" end
+
+S:writeln("<menu id=\""..title.. "\" label=\""..title.."\" icon=\"" .. icon.. "\">\n")
+Openbox_ItemsWrite(S, group)
+S:writeln("</menu>\n")
+
+end
+
+function Openbox_MenuWrite(menu, Path)
+local i, item, S
+
+S=OpenOutputFile(Path)
+if S ~= nil
+then
+	S:writeln("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
+  S:writeln("<openbox_menu xmlns=\"http://openbox.org/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"  xsi:schemaLocation=\"http://openbox.org/ file:///usr/share/openbox/menu.xsd\">\n")
+	S:writeln("<menu id=\"root-menu\" label=\"Openbox\">\n")
+
+	if #faves_config > 0
+	then
+	Openbox_ItemsWrite(S, faves_config)
+	S:writeln("<separator />\n")
+	end
+
+
+	Openbox_ItemsWrite(S, menu)
+	S:writeln("<separator />\n")
+	S:writeln("<item label=\"Reconfigure\"><action name=\"Reconfigure\"/></item>\n") 
+	S:writeln("<item label=\"Restart\"><action name=\"Restart\"/></item>\n") 
+	S:writeln("<item label=\"Exit\"><action name=\"Exit\"/></item>\n") 
+
+	S:writeln("</menu>\n")
+  S:writeln("</openbox_menu>\n")
+	S:close()
+
+	os.execute("openbox --reconfigure")
+end
+
+end
 
 
 --[[
@@ -1206,78 +1240,6 @@ end
 
 
 
---[[
--- MLVWM  ***************************************
-]]--
-
-
-function MLVWM_ItemsWrite(S, group)
-local conf, name, item
-
-for name,item in pairs(group)
-do
-	if item.type=="group"
-	then
-		S:writeln("  \""..item.name.. "\" SubMenu " .. string.gsub(item.name, " ", "_").. "\n")
-	elseif item.invoke ~= nil 
-	then 
-			S:writeln(" \"".. item.name .. "\" Action Exec \"" ..item.name .. "\" exec " .. item.invoke .. "\n")
-	end
-end
-end
-
-
-function MLVWM_SubmenuWrite(S, group)
-local name, item
-
--- First go through and write out all the submenus
-for name,item in pairs(group)
-do
-	if item.type=="group" then MLVWM_SubmenuWrite(S, item) end
-end
-
-
-S:writeln("Menu " .. string.gsub(group.name, " ", "_") .. ", Label \"" .. group.name .. "\"\n")
-
-if group.name=="RootMenu" and #faves_config > 0
-then
-	MLVWM_ItemsWrite(S, faves_config)
-	S:writeln("\"\" NonSelect\n")
-end
-
-
-MLVWM_ItemsWrite(S, group)
-
-if group.name == "RootMenu"
-then
-	S:writeln("\"\" NonSelect\n")
-	S:writeln("\"Restart\" Action Restart mlvwm\n")
-	S:writeln("\"Exit\" Action Exit\n")
-end
-
-S:writeln("END\n\n")
-end
-
-
-
-function MLVWM_MenuWrite(menu, Path)
-local i, item, S
-
-S=OpenOutputFile(Path)
-if S ~= nil
-then
-	MLVWM_SubmenuWrite(S, menu)
-	S:close()
-end
-
-end
-
-
---[[
--- MWM (Motif Window Manager) ***************************************
-]]--
-
-
 function TWM_ItemsWrite(S, group)
 local conf, name, item
 
@@ -1340,6 +1302,7 @@ S:close()
 end
 
 end
+
 
 
 --[[
@@ -1415,61 +1378,190 @@ end
 ]]--
 
 
-function CtrlMenu_ItemsWrite(S, group, depth)
-local name, item, str, icon
 
-for name,item in pairs(group)
+
+function ProcessAppOverrides(app)
+local name, config, item
+
+config=overrides_config[app.name]
+if config == nil then config=overrides_config[app.exec] end
+if config == nil
+then 
+  for name,item in pairs(overrides_config)
+  do
+		if strutil.pmatch(name, app.name) == true
+		then
+			config=item
+		end
+  end
+end
+
+
+if config ~= nil 
+then
+	if strutil.strlen(config.group) > 0 then app.group=config.group end
+	if strutil.strlen(config.icon) > 0 then app.icon=config.icon end
+	if config.termapp == true then app.termapp=true end
+	if config.ignore == true then app.ignore=true end
+	if config.query == true then app.query=true end
+end
+
+end
+
+
+
+function NewApp(source, name, exec)
+local app={}
+
+app.type="app"
+app.name=name
+app.termapp=false
+app.ignore=false
+app.query=false
+app.fileselect=false
+app.source=source
+app.exec=exec
+
+return app
+end
+
+
+function NewGroup(name)
+if group_configs[name]==nil 
+then 
+	group_configs[name]={} 
+	group_configs[name].ignore=false
+	group_configs[name].icons=""
+end
+
+return group_configs[name]
+end
+
+
+
+
+function MenuAddGroup(group)
+local conf, parent
+
+if strutil.strlen(group) ==0 then return nil end
+conf=group_configs[group]
+
+if conf ~=nil and conf.parent ~=nil
+then
+	parent=MenuAddGroup(conf.parent)
+else
+	parent=menu_config
+end
+
+if parent[group] == nil 
+then 
+		parent[group]={} 
+		parent[group].type="group"
+		parent[group].name=group
+--		parent[group].size=0
+end
+
+return parent[group]
+end
+
+
+function MenuAddItem(menu_name, item)
+local group
+
+group=MenuAddGroup(menu_name)
+if group ~= nil then table.insert(group, item) end
+
+end
+
+
+function ProcessImpliedApps(implied_apps)
+local toks, item, config
+
+
+toks=strutil.TOKENIZER(implied_apps, ",")
+item=toks:next()
+while item ~= nil
 do
-	if item.name ~= nil and item.type ~= "group"
+	config=app_configs[string.lower(item)]
+	if config ~= nil and config.group ~=nil then MenuAddItem(config.group, config) end
+	item=toks:next()
+end
+
+end
+
+
+
+
+
+
+function GroupInfoFind(group)
+local conf, name 
+local icon=nil
+
+conf=group_configs[group.name]
+if conf ~= nil 
+then
+	if strutil.strlen(conf.name) > 0 then name=conf.name end
+	if settings.find_icons == true
 	then
-	str=item.name
-	icon=AppIconFind(item, settings.icon_path)
---	if icon ~= nil then str=str.. " [#"..icon.."] " end
-	if item.invoke ~= nil then str=str .. "	-- " .. item.invoke end
-	S:writeln(str .."\n")
+		if strutil.strlen(conf.icons) > 0 then conf.icon=IconFindFromList(conf.icons) end
+		if conf.icon ~= nil then icon=conf.icon end
 	end
 end
-end
 
-
-function CtrlMenu_SubmenuWrite(S, group, depth)
-local name, item
-
-if group.name ~= "RootMenu"
+if name == nil then name=group.name end
+if icon == nil
 then
-S:writeln(group.name.. " {\n")
+	if settings.find_icons == true 
+	then 
+		icon=IconFindFromList("folder") 
+	else
+		icon=""
+	end
 end
 
--- First go through and write out all the submenus
-for name,item in pairs(group)
-do
-	if item.type=="group" then CtrlMenu_SubmenuWrite(S, item, depth + 1) end
-end
-
-CtrlMenu_ItemsWrite(S, group, depth + 1)
-
-if group.name ~= "RootMenu"
-then
-S:writeln("\n}\n")
-end
-
-
+return name, icon
 end
 
 
 
-function CtrlMenu_MenuWrite(menu, Path)
+
+
+
+
+
+
+
+
+
+
+
+
+function OpenOutputFile(Path)
 local S
 
-S=OpenOutputFile(Path)
-if S ~= nil
-then
-if #faves_config > 0 then CtrlMenu_ItemsWrite(S, faves_config, -1) end
-CtrlMenu_SubmenuWrite(S, menu, -1)
-S:close()
+-- don't try to create or rename stdout!
+if Path ~= "-" 
+then 
+	filesys.mkdirPath(Path)
+	filesys.rename(Path, Path.."-")
 end
 
+S=stream.STREAM(Path, "w")
+if S==nil
+then
+	io.stderr:write( "ERROR: Failed to open output '"..Path.."'\n")
+else
+	io.stderr:write( "writing to: "..Path.."\n")
 end
+
+return(S)
+end
+
+
+
+
+
 
 
 
@@ -1741,120 +1833,6 @@ if misc ~= nil and #misc > 0 then table.insert(menu_config, misc) end
 end
 
 
-function DisplayHelp()
-
-print("usage:")
-print("")
-print(" lua menubuilder.lua [options] [window manager] [window manager] ...")
-print("")
-
-print("options:")
-print("")
-
-print("  -c                 path to config file, if not supplied then ~/.menubuilder.conf will be tried, followed by /etc/menubuilder.conf")
-print("  -faves [items]     a list of program names to include above everthing else on the top menu")
-print("  -icons [path]      add a colon-separated list of paths under which to search for icons")
-print("  -no-icons          do not find icons for the menu")
-print("  -t [app]           terminal app to use for terminal programs, defaults to 'xterm'")
-print("  -term [app]        terminal app to use for terminal programs, defaults to 'xterm'")
-print("  -dialogs [app]     dialog app to use for programs that need additional info. Choices are 'xdialog', 'zenity' or 'qarma'. Defaults to 'no dialogs'. If no dialog app is set then entries for apps requring dialogs will not be added to the menu.")
-print("  -misc [size]       Merge any top-level menus that contain less than <size> items into a single 'miscellaneous' top-level group.")
-print("  -submenu [size]    For any groups that are not top-level and which contain less than <size> items, show the items in the parent group, rather than in a submenu.")
-
-print("")
-
-print("supported window managers:")
-print("Multiple 'window manager' arguments can be supplied and can contain the following values:")
-print("")
-print("   all                this will write out menu files for all supported window managers")
-print("   blackbox           write to file ~/.blackbox/menu")
-print("   fluxbox            write to file ~/.fluxbox/menu")
-print("   openbox            write to file ~/.config/openbox/menu.xml")
-print("   icewm              write to file ~/.icewm/menu")
-print("   pekwm              write to file ~/.pekwm/menu")
-print("   mlvwm              write to file ~/.menu.mlvwm")
-print("   pwm                write to file ~/.pwm/rootmenu.conf")
-print("   jwm                write to file ~/.menu.jwm")
-print("   twm                write to file ~/.menu.twm")
-print("   ctwm               write to file ~/.menu.ctwm")
-print("   vtwm               write to file ~/.menu.vtwm")
-print("   moonwm             write to file ~/.config/moonwm/favorites")
-print("   xmenu              write to file ~/.menu.xmenu")
-print("   ctrlmenu           write to file ~/.menu.ctrlmenu")
-print(" ")
-print("   stdout:blackbox    write blackbox menu to stdout")
-print("   stdout:fluxbox     write fluxbox menu to stdout")
-print("   stdout:openbox     write fluxbox menu to stdout")
-print("   stdout:icewm       write icewm menu to stdout")
-print("   stdout:pekwm       write pekwm menu to stdout")
-print("   stdout:mlvwm       write mlvwm menu to stdout")
-print("   stdout:pwm         write pwm menu to stdout")
-print("   stdout:jwm         write jwm menu to stdout")
-print("   stdout:twm         write twm menu to stdout")
-print("   stdout:ctwm        write ctwm menu to stdout")
-print("   stdout:vtwm        write vtwm menu to stdout")
-print("   stdout:moonwm      write moonwm menu to stdout")
-print("   stdout:xmenu       write xmenu menu to stdout")
-print("   stdout:ctrlmenu    write ctrlmenu menu to stdout")
-print("")
-
-print("example:")
-print("")
-print("  MenuBuilder.lua -faves xterm,links,smplayer jwm icewm")
-
-
-end
-
-
-
-function ParseCommandLine(args)
-for i,arg in ipairs(args)
-do
-
-if arg == "-c" 
-then 
-	settings.config=args[i+1]
-	args[i+1]=""
-elseif arg == "-faves" 
-then 
-	settings.faves=args[i+1]
-	args[i+1]=""
-elseif arg == "-icons" 
-then
-	settings.icon_path=settings.icon_path .. args[i+1] .. ":"
-	args[i+1]=""
-elseif arg == "-no-icons" 
-then
-	settings.find_icons=false
-elseif arg == "-s" or arg == "-submenu"
-then
-	settings.submenu_size=tonumber(args[i+1])
-	if settings.submenu_size==nil then settings.submenu_size=0 end
-	args[i+1]=""
-elseif arg == "-m" or arg == "-misc"
-then
-	settings.misc_group=tonumber(args[i+1])
-	if settings.misc_group==nil then settings.misc_group=0 end
-	args[i+1]=""
-elseif arg== "-dialogs"
-then
-	DialogApp(args[i+1])
-	args[i+1]=""
-elseif arg=="-t" or arg=="-term"
-then
-	settings.term=args[i+1]
-	args[i+1]=""
-elseif arg=="-?" or arg=="-h" or arg=="-help" or arg=="--help"
-then
-	DisplayHelp()
-	os.exit(0)
-elseif arg=="all" then settings.output="jwm,twm,vtwm,ctwm,pwm,icewm,pekwm,mlvwm,blackbox,fluxbox,openbox,moonwm,xmenu,ctrlmenu"
-else settings.output=settings.output .. args[i]..","
-end
-
-end
-
-end
 
 
 
@@ -1871,6 +1849,7 @@ end
 
 
 settings.config = process.getenv("HOME") .. "/.config/menubuilder.conf"
+settings.config = settings.config .. ":" .. process.getenv("HOME") .. "/.config/menubuilder/*.conf"
 settings.config = settings.config .. ":" .. process.getenv("HOME") .. "/.menubuilder.conf"
 settings.config = settings.config .. ":/etc/menubuilder.conf"
 settings.term="xterm"

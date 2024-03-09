@@ -1,58 +1,28 @@
-MenuBuilder.lua - root menu generation for window managers
-----------------------------------------------------------
+title: menubuilder
+mansection: 1
+date: 9 March 2024
 
-MenuBuilder can scan for installed applications and build root menus for a number of X11 window managers.  Icons are supported under jwm and icewm and MenuBuilder will use a number of heuristics to search for them. A special group 'faves' can be populated with will create a number of application options at the top of the menu. Terminal apps can be added to the list, with a specifiable terminal emulator to run them, and a dialog app like xdialog, zenity or qarma can be specified to add text or file select queries to applications that expect to be told a url or a list of files on startup.
+SYNOPSIS
+--------
 
-MenuBuilder is specifically designed for indexing older applications that lack a .desktop file that describes them. However, it also uses .desktop files and is compatible with my 'Sommelier' app (https://github.com/ColumPaget/Sommelier) which installs windows apps for use with wine, and creates .desktop files for them. 
-In addition to .desktop files, MenuBuilder uses a list of appplications from a supplied config file, 'MenuBuilder.conf'. This file is far from exhaustive, but it covers a lot of apps that I personally use. If you add to it, you could send the diff to colums.projects@gmail.com, and I'll add it to the distributed file. This file should either be installed as /etc/MenuBuilder.conf or in one's home directory as ~/.MenuBuilder.conf
-
-
-Supported Window Managers
--------------------------
-
-blackbox  https://github.com/bradleythughes/blackbox/
-fluxbox   http://fluxbox.org/
-openbox   http://openbox.org/
-icewm     https://ice-wm.org/
-pekwm     http://www.pekwm.org/
-mlvwm     http://www2u.biglobe.ne.jp/~y-miyata/mlvwm.html
-jwm       http://joewing.net/projects/jwm/
-fvwm      https://www.fvwm.org/
-pwm       https://tuomov.iki.fi/software/  https://github.com/Cougar/pwm
-vtwm      http://www.vtwm.org/
-ctwm      https://www.ctwm.org/index.html
-moonwm    https://github.com/jzbor/moonwm
-xmenu     https://github.com/phillbush/xmenu
-ctrlmenu  https://github.com/phillbush/ctrlmenu
-twm       
+menubuilder.lua is a lua script that searches for installed programs and .desktop files and builds window-manager menus from them.
 
 
-Requirements
-------------
-
-MenuBuilder.lua requires lua, libUseful (https://github.com/ColumPaget/libUseful) version 4.13 and above, and libUseful-lua (https://github.com/ColumPaget/libUseful-lua) version 2.9 and above to have been installed. Building libUseful-lua requires SWIG.
-
-Installation
-------------
-
-`make` will build menubuilder.lua, although a pre-built copy should come with the source. `make install` will copy menubuilder.lua to `~/bin` and menubuilder.conf to `~/.config/menubuilder/`.  `make global-install` will copy menubuilder.lua to `/usr/local/bin`, the manpage menubuilder.1 to `/usr/local/share/man/man1` and `menubuilder.conf` to `/etc/`.
-
-menubuilder can then be run as a lua script with just "lua menubuilder.lua all". On linux the 'binfmt_misc' feature can be used to automatically run menubuilder without specifying the lua interpreter.
-
-
-
-Usage
+USAGE
 -----
 
 ```
 	lua menubuilder.lua [options] [window manager] [window manager] ...
 ```
 
-Options
+lua scripts are usually run with `lua <script>` However, linux's "binfmt" system can be configured to auto-detect a lua script and invoke the interpreter, allowing menubuilder to be run without the 'lua' prefix.
+
+
+OPTIONS
 -------
 
 ```
-	-c                 path to config file, if not supplied then ~/.config/menubuilder.conf will be tried, followed by ~/.menubuilder.conf and finally /etc/menubuilder.conf
+	-c                 path to config file, if not supplied then `~/.config/menubuilder/*.conf` will be tried, followed by, `~/.config/menubuilder.conf`,  `~/.menubuilder.conf` and finally `/etc/menubuilder.conf`
 	-faves [items]     a list of program names to include above everthing else on the top menu 
 	-icons [path]      add a colon-separated list of paths under which to search for icons
 	-no-icons          do not find icons for the menu
@@ -63,6 +33,8 @@ Options
 	-submenu [size]    For any groups that are not top-level and which contain less than <size> items, show the items in the parent group, rather than in a submenu.
 
 ```
+
+
 Multiple 'window manager' arguments can be supplied and can contain the following values:
 
 ```
@@ -99,12 +71,13 @@ Multiple 'window manager' arguments can be supplied and can contain the followin
 ```
 
 
-Example
+EXAMPLE
 -------
 
 ```
 	menubuilder.lua -faves xterm,links,smplayer jwm icewm
 ```
+
 
 Including the menus
 -------------------

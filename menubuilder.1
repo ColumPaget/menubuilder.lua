@@ -1,0 +1,339 @@
+.TH  menubuilder  1 " 9 March 2024"
+
+.SS SYNOPSIS
+ 
+.P
+menubuilder.lua is a lua script that searches for installed programs and .desktop files and builds window-manager menus from them. 
+.SS USAGE
+ 
+.nf
+
+	lua menubuilder.lua [options] [window manager] [window manager] ...
+.fi
+.ad b
+ 
+.P
+lua scripts are usually run with 
+.na
+lua <script>
+.ad
+However, linux\(aqs "binfmt" system can be configured to auto-detect a lua script and invoke the interpreter, allowing menubuilder to be run without the \(aqlua\(aq prefix. 
+.SS OPTIONS
+ 
+.nf
+
+	\-c                 path to config file, if not supplied then `\*(ti/.config/menubuilder/*.conf` will be tried, followed by, `\*(ti/.config/menubuilder.conf`,  `\*(ti/.menubuilder.conf` and finally `/etc/menubuilder.conf`
+	\-faves [items]     a list of program names to include above everthing else on the top menu 
+	\-icons [path]      add a colon\-separated list of paths under which to search for icons
+	\-no\-icons          do not find icons for the menu
+	\-t [app]           terminal app to use for terminal programs, defaults to \(aqxterm\(aq
+	\-term [app]        terminal app to use for terminal programs, defaults to \(aqxterm\(aq
+	\-dialogs [app]     dialog app to use for programs that need additional info. Choices are \(aqxdialog\(aq, \(aqzenity\(aq or \(aqqarma\(aq. Defaults to \(aqno dialogs\(aq. If no dialog app is set then entries for apps requring dialogs will not be added to the menu.
+	\-misc [size]       Merge any top\-level menus that contain less than <size> items into a single \(aqmiscellaneous\(aq top\-level group.
+	\-submenu [size]    For any groups that are not top\-level and which contain less than <size> items, show the items in the parent group, rather than in a submenu.
+
+.fi
+.ad b
+ 
+.P
+Multiple \(aqwindow manager\(aq arguments can be supplied and can contain the following values: 
+.nf
+
+	all                this will write out menu files for all supported window managers
+	blackbox           write to file \*(ti/.blackbox/menu
+	fluxbox            write to file \*(ti/.fluxbox/menu
+	openbox            write to file \*(ti/.config/openbox/menu.xml
+	icewm              write to file \*(ti/.icewm/menu
+	pekwm              write to file \*(ti/.pekwm/menu
+	pwm                write to file \*(ti/.pwm/rootmenu.conf
+	jwm                write to file \*(ti/.menu.jwm
+	mlvwm              write to file \*(ti/.menu.mlvwm
+	twm                write to file \*(ti/.menu.twm
+	ctwm               write to file \*(ti/.menu.ctwm
+	vtwm               write to file \*(ti/.menu.vtwm
+	moonwm             write to file \*(ti/.config/moonwm/favorites.xmenu
+	xmenu              write to file \*(ti/.menu.xmenu
+	ctrlmenu           write to file \*(ti/.menu.ctrlmenu
+	
+	stdout:blackbox    write blackbox menu to stdout
+	stdout:fluxbox     write fluxbox menu to stdout
+	stdout:openbox     write fluxbox menu to stdout
+	stdout:icewm       write icewm menu to stdout
+	stdout:pekwm       write pekwm menu to stdout
+	stdout:pwm         write pwm menu to stdout
+	stdout:jwm         write jwm menu to stdout
+	stdout:mlvwm       write mlvwm menu to stdout
+	stdout:twm         write twm menu to stdout
+	stdout:moonwm      write moonwm menu to stdout
+	stdout:ctwm        write ctwm menu to stdout
+	stdout:vtwm        write vtwm menu to stdout
+	stdout:xmenu       write xmenu menu to stdout
+	stdout:ctrlmenu    write ctrlmenu menu to stdout
+.fi
+.ad b
+ 
+.SS EXAMPLE
+ 
+.nf
+
+	menubuilder.lua \-faves xterm,links,smplayer jwm icewm
+.fi
+.ad b
+ 
+.SS Including the menus
+ 
+.P
+For icewm, blackbox, fluxbox and pekwm the menu should immediately become active. For the other window managers you\(aqll need to include a path to the menu file in the window manager config. 
+.P
+Paths that start with \(aq/root/\(aq indicate that you need to supply the actual path to your home directory. The \(aqroot\(aq user (with home directory \(aq/root/\(aq) is just used as an example in these cases. 
+.P
+For JWM add the line 
+.nf
+
+	<Include>/root/.menu.jwm</Include>
+.fi
+.ad b
+ 
+.P
+to your .menu.jwm file 
+.P
+For fvwm add the line 
+.nf
+
+	read /root/.fvwm/fvwm.menu
+.fi
+.ad b
+ 
+.P
+to your \*(ti/.fvwm/config file 
+.P
+For mlvwm add the line 
+.nf
+
+	Read .menu.mlvwm
+.fi
+.ad b
+ 
+.P
+to your .mlvrc file, and also add the \(aqRootMenu\(aq menu to your menubar, like this: 
+.nf
+
+	# Definition MenuBar
+	MenuBar default
+	RootMenu
+	def\-File
+	def\-Edit
+	def\-View
+	def\-Label
+	def\-Window
+	END
+.fi
+.ad b
+ 
+.P
+For twm add the line 
+.nf
+
+	sinclude(`/root/.menu.twm\(aq)
+.fi
+.ad b
+ 
+.P
+to your .twmrc 
+.P
+For ctwm add the line 
+.nf
+
+	sinclude(`/root/.menu.ctwm\(aq)
+.fi
+.ad b
+ 
+.P
+to your .ctwmrc 
+.P
+For vtwm add the line 
+.nf
+
+	sinclude(`/root/.menu.vtwm\(aq)
+.fi
+.ad b
+ 
+.P
+to your .vtwmrc AND RUN VTWM AS \(aqvtwm -m\(aq 
+.P
+For pwm add the line 
+.nf
+
+	include rootmenu.conf
+.fi
+.ad b
+  to your .pwm/pwm.conf. You may also need to delete or rename any existing rootmenu definition, say in default-menus.conf 
+.P
+For xmenu you have to bind the following command to a keystroke or a mouse click somehow 
+.nf
+
+	cat \*(ti/.menu.xmenu | xmenu | sh
+.fi
+.ad b
+ 
+.P
+or you can build the menu on-the-fly with 
+.nf
+
+	menubuilder.lua ctrlmenu:stdout | ctrlmenu
+.fi
+.ad b
+ 
+.P
+For ctrlmenu you have to bind the following command to a keystroke or a mouse click somehow 
+.nf
+
+	cat \*(ti/.menu.ctrlmenu | ctrlmenu
+.fi
+.ad b
+ 
+.P
+or you can build the menu on-the-fly with 
+.nf
+
+	menubuilder.lua ctrlmenu:stdout | ctrlmenu
+.fi
+.ad b
+ 
+.P
+Note that the current version of ctrlmenu has a README.md file that appears to detail a different version of the program that has different command-line args. 
+.SS Icon Search System
+ 
+.P
+The program builds up a search path for icons by concatenating: 
+.P
+the environment variable "ICON_PATH" any paths passed on the command-line with the "-icons" argument for each \(aqbin\(aq directory in path look for an directory above it called "share/icons" and for "share/icons/hicolor/64x64",  "share/icons/hicolor/48x48", and "share/icons/hicolor/32x32". 
+.P
+In all these directories it looks for icons using information in this order: 
+.P
+the names suggested in the config file the name/filename of the application the group the application belongs to 
+.P
+Icons are currently supported for the Openbox, JWM and IceWM window managers and the xmenu and ctrlmenu menu systems. Icons can be turned off altogether with the \(aq-no-icons\(aq command-line option. 
+.SS Window Manager Update
+ 
+.P
+The jwm, openbox and icewm window managers support auto-update, so that when menubuilder creates a new menu for them, it signals them to reload their menus. This allows menubuilder to be launched by an inotify or other filesystem notification service sees new files created. Menus can thus be automatically updated and the window-manager told to reload. 
+.SS Config File
+ 
+.P
+The config file has the following types of entry 
+.br
+ app entries
+  
+.P
+App entries describe programs that lack .desktop files. They have the form: 
+.nf
+
+	app [name] group=[group] icons=[icon names] title=[title] invoke=[invocation]
+.fi
+.ad b
+ 
+.P
+\(aqname\(aq will be the filename on disk for this program. 
+.P
+\(aqgroup\(aq is the application group, or submenu that this item belongs in. \(aqtitle\(aq is the name that will be displayed in the menu. \(aqicons\(aq is a comma-separated list of icon names that could be used as an icon for this app (menubuilder will search for files matching [icon name].png, [icon name].jpg etc). \(aqinvocation\(aq is the full command-line used to run the app. The icons, title and invoke arguments are optional. 
+.P
+For example: 
+.nf
+
+	app xterm group=TerminalEmulator icons=xterm,terminal title="Xterm"
+	app links group=WebBrowser icons=links,links\-browser invoke="links \-g www.google.com"
+.fi
+.ad b
+ 
+.P
+if an app needs to be run in a terminal, then add the \(aqtermapp\(aq modifier, like so: 
+.nf
+
+	app lynx termapp group=WebBrowser icons=browser invoke="lynx www.google.com"
+.fi
+.ad b
+ 
+.P
+if an app needs to be passed a text-argument, like a url for instance, then use the \(aqquery\(aq modifier: 
+.nf
+
+	app rdesktop query group=Utility icons=vnc title="RDesktop (RDP)" query:title="host to connect to?"
+.fi
+.ad b
+ 
+.P
+if an app needs to be passed a list of files on startup, then use the \(aqfileapp\(aq modifier, like so: 
+.nf
+
+	app mpg123 termapp fileapp group=Audio icons=audio,mixer query:title="mpg123: Select Files to Play" query:filter="*.mp3 *.mpg3 *.mpeg3"
+.fi
+.ad b
+ 
+.P
+(please note, the \(aqquery:filter\(aq feature is only supported for qarma at this time, not zenity or xdialog) 
+.P
+An app can \(aqimply\(aq multiple entries. These are usually instances of the app run with different arguments. 
+.nf
+
+	app cxine implies=podcast\-sn,podcast\-twis
+  app podcast\-sn title="Security Now Podcast" group=Podcasts invoke="cxine \-podcast https://feeds.twit.tv/sn_video_hd.xml"
+  app podcast\-twis title="This Week In Space Podcast" group=Podcasts invoke="cxine \-podcast https://feeds.twit.tv/twis.xml"
+.fi
+.ad b
+ 
+.br
+ override entries  Override entries are app entries that mostly apply to apps discovered via .desktop files, and which override the settings of those .desktop files, changing the group, icon to display title of the app. For example:  
+.na
+
+	override DesktopDungeons group=Roguelike icons=skull,sword,goblin
+
+.ad
+
+  
+.P
+Override entries have a special feature where multiple apps can be specified as a comma-separated list, and the same config applied to them, like so: 
+.nf
+
+override Helm,PHASEX,IanniX,QMidiArp,Qtractor,drumkv1,samplv1,padthv1,synthv1,amsynth group=Music
+.fi
+.ad b
+ 
+.P
+Overrides also support shell-style pattern matches, although this has some issues with libUseful versions earlier than v4.74. For example: 
+.nf
+
+	override *Fight* group=FightingGames icons=fist
+.fi
+.ad b
+ 
+.br
+ group entries  group entries apply settings to a menu subgroup, for example:  
+.na
+
+	group BoardGame title="Board Games" parent=Game icons=application\-board?game,BoardGame,Pawn,Knight,Chess
+
+.ad
+
+  
+.P
+The \(aqparent\(aq option specifies that this is not a top-level group, but is a subgroup of the group \(aqgames\(aq 
+.P
+Some groups are discovered from the "Categories" entry in .desktop files. Such entries are normally a list of groups seperated by semi-colons. menubuilder.lua picks the first of these groups, but this is not always useful. You can ignore groups with the \(aqignore\(aq qualifier: 
+.nf
+
+group KDE ignore
+.fi
+.ad b
+ 
+.P
+This will have the effect that this group will not be added to the menu, and that applications belonging to this group will be booked against the first group in their "Categories" entry that isn\(aqt ignored. 
+.br
+ \(aqignore\(aq entries  \(aqignore-groups\(aq and \(aqignore-apps\(aq can be used to more conviniently list items to be ignored, like so:  
+.na
+
+ignore\-groups GTK,Gtk,Qt,Application,ConsoleOnly,GNOME,SDL
+
+.ad
+
+   
